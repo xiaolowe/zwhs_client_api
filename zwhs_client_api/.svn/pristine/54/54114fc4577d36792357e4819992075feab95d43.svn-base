@@ -1,0 +1,428 @@
+package cn.org.citycloud.zwhs.entity;
+
+import java.io.Serializable;
+import javax.persistence.*;
+import java.math.BigDecimal;
+import java.util.Date;
+
+
+/**
+ * The persistent class for the store_goods database table.
+ * 
+ */
+@Entity
+@Table(name="store_goods")
+@NamedQuery(name="StoreGood.findAll", query="SELECT s FROM StoreGood s")
+public class StoreGood implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	@Id
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	@Column(name="goods_id", unique=true, nullable=false)
+	private int goodsId;
+
+	@Column(name="avg_score", precision=10, scale=2)
+	private BigDecimal avgScore;
+
+	@Column(name="brand_name", nullable=false, length=100)
+	private String brandName;
+
+	@Column(name="brand_no", nullable=false)
+	private int brandNo;
+
+	@Column(name="evaluated_num")
+	private int evaluatedNum;
+
+	@Column(name="gc_lit_id")
+	private int gcLitId;
+
+	@Column(name="gc_lit_name", length=200)
+	private String gcLitName;
+
+	@Column(name="gc_name", length=200)
+	private String gcName;
+
+	@Column(name="gc_no")
+	private int gcNo;
+
+	@Lob
+	@Column(name="goods_attr")
+	private String goodsAttr;
+
+	@Lob
+	@Column(name="goods_body")
+	private String goodsBody;
+
+	@Column(name="goods_costprice", nullable=false, precision=10, scale=2)
+	private BigDecimal goodsCostprice;
+
+	@Column(name="goods_image", length=100)
+	private String goodsImage;
+
+	@Column(name="goods_image_small", length=100)
+	private String goodsImageSmall;
+
+	@Column(name="goods_marketprice", nullable=false, precision=10, scale=2)
+	private BigDecimal goodsMarketprice;
+
+	@Column(name="goods_name", length=50)
+	private String goodsName;
+
+	@Column(name="goods_number")
+	private int goodsNumber;
+
+	@Column(name="goods_price", nullable=false, precision=10, scale=2)
+	private BigDecimal goodsPrice;
+
+	@Column(name="goods_sellprice", precision=10, scale=2)
+	private BigDecimal goodsSellprice;
+
+	@Column(name="goods_sn", length=20)
+	private String goodsSn;
+
+	@Lob
+	@Column(name="goods_spec")
+	private String goodsSpec;
+
+	@Column(name="goods_state")
+	private int goodsState;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="ins_date")
+	private Date insDate;
+
+	@Column(name="is_recommend")
+	private int isRecommend;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="offline_time")
+	private Date offlineTime;
+
+	@Column(name="sell_number")
+	private int sellNumber;
+
+	@Column(name="stock_number")
+	private int stockNumber;
+
+	@Column(name="store_id", nullable=false)
+	private int storeId;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="upd_date")
+	private Date updDate;
+	
+	@Column(name="is_add_retail")
+	private int isAddRetail;
+	
+	@Column(name="store_income", precision=10, scale=2)
+	private BigDecimal storeIncome;
+	
+	@Column(name="retail_init_price", precision=10, scale=2)
+	private BigDecimal retailInitPrice;
+	
+	@Column(name="retail_sale_price", precision=10, scale=2)
+	private BigDecimal retailSalePrice;
+	
+	@Column(name="retail_price_low", precision=10, scale=2)
+	private BigDecimal retailPriceLow;
+	
+	@Column(name="retail_price_high", precision=10, scale=2)
+	private BigDecimal retailPriceHigh;
+	
+	@Column(name="goods_verify")
+	private int goodsVerify;
+
+	public StoreGood() {
+	}
+
+	public int getGoodsId() {
+		return this.goodsId;
+	}
+
+	public void setGoodsId(int goodsId) {
+		this.goodsId = goodsId;
+	}
+
+	public BigDecimal getAvgScore() {
+		return this.avgScore;
+	}
+
+	public void setAvgScore(BigDecimal avgScore) {
+		this.avgScore = avgScore;
+	}
+
+	public String getBrandName() {
+		return this.brandName;
+	}
+
+	public void setBrandName(String brandName) {
+		this.brandName = brandName;
+	}
+
+	public int getBrandNo() {
+		return this.brandNo;
+	}
+
+	public void setBrandNo(int brandNo) {
+		this.brandNo = brandNo;
+	}
+
+	public int getEvaluatedNum() {
+		return this.evaluatedNum;
+	}
+
+	public void setEvaluatedNum(int evaluatedNum) {
+		this.evaluatedNum = evaluatedNum;
+	}
+
+	public int getGcLitId() {
+		return this.gcLitId;
+	}
+
+	public void setGcLitId(int gcLitId) {
+		this.gcLitId = gcLitId;
+	}
+
+	public String getGcLitName() {
+		return this.gcLitName;
+	}
+
+	public void setGcLitName(String gcLitName) {
+		this.gcLitName = gcLitName;
+	}
+
+	public String getGcName() {
+		return this.gcName;
+	}
+
+	public void setGcName(String gcName) {
+		this.gcName = gcName;
+	}
+
+	public int getGcNo() {
+		return this.gcNo;
+	}
+
+	public void setGcNo(int gcNo) {
+		this.gcNo = gcNo;
+	}
+
+	public String getGoodsAttr() {
+		return this.goodsAttr;
+	}
+
+	public void setGoodsAttr(String goodsAttr) {
+		this.goodsAttr = goodsAttr;
+	}
+
+	public String getGoodsBody() {
+		return this.goodsBody;
+	}
+
+	public void setGoodsBody(String goodsBody) {
+		this.goodsBody = goodsBody;
+	}
+
+	public BigDecimal getGoodsCostprice() {
+		return this.goodsCostprice;
+	}
+
+	public void setGoodsCostprice(BigDecimal goodsCostprice) {
+		this.goodsCostprice = goodsCostprice;
+	}
+
+	public String getGoodsImage() {
+		return this.goodsImage;
+	}
+
+	public void setGoodsImage(String goodsImage) {
+		this.goodsImage = goodsImage;
+	}
+
+	public String getGoodsImageSmall() {
+		return this.goodsImageSmall;
+	}
+
+	public void setGoodsImageSmall(String goodsImageSmall) {
+		this.goodsImageSmall = goodsImageSmall;
+	}
+
+	public BigDecimal getGoodsMarketprice() {
+		return this.goodsMarketprice;
+	}
+
+	public void setGoodsMarketprice(BigDecimal goodsMarketprice) {
+		this.goodsMarketprice = goodsMarketprice;
+	}
+
+	public String getGoodsName() {
+		return this.goodsName;
+	}
+
+	public void setGoodsName(String goodsName) {
+		this.goodsName = goodsName;
+	}
+
+	public int getGoodsNumber() {
+		return this.goodsNumber;
+	}
+
+	public void setGoodsNumber(int goodsNumber) {
+		this.goodsNumber = goodsNumber;
+	}
+
+	public BigDecimal getGoodsPrice() {
+		return this.goodsPrice;
+	}
+
+	public void setGoodsPrice(BigDecimal goodsPrice) {
+		this.goodsPrice = goodsPrice;
+	}
+
+	public BigDecimal getGoodsSellprice() {
+		return this.goodsSellprice;
+	}
+
+	public void setGoodsSellprice(BigDecimal goodsSellprice) {
+		this.goodsSellprice = goodsSellprice;
+	}
+
+	public String getGoodsSn() {
+		return this.goodsSn;
+	}
+
+	public void setGoodsSn(String goodsSn) {
+		this.goodsSn = goodsSn;
+	}
+
+	public String getGoodsSpec() {
+		return this.goodsSpec;
+	}
+
+	public void setGoodsSpec(String goodsSpec) {
+		this.goodsSpec = goodsSpec;
+	}
+
+	public int getGoodsState() {
+		return this.goodsState;
+	}
+
+	public void setGoodsState(int goodsState) {
+		this.goodsState = goodsState;
+	}
+
+	public Date getInsDate() {
+		return this.insDate;
+	}
+
+	public void setInsDate(Date insDate) {
+		this.insDate = insDate;
+	}
+
+	public int getIsRecommend() {
+		return this.isRecommend;
+	}
+
+	public void setIsRecommend(int isRecommend) {
+		this.isRecommend = isRecommend;
+	}
+
+	public Date getOfflineTime() {
+		return this.offlineTime;
+	}
+
+	public void setOfflineTime(Date offlineTime) {
+		this.offlineTime = offlineTime;
+	}
+
+	public int getSellNumber() {
+		return this.sellNumber;
+	}
+
+	public void setSellNumber(int sellNumber) {
+		this.sellNumber = sellNumber;
+	}
+
+	public int getStockNumber() {
+		return this.stockNumber;
+	}
+
+	public void setStockNumber(int stockNumber) {
+		this.stockNumber = stockNumber;
+	}
+
+	public int getStoreId() {
+		return this.storeId;
+	}
+
+	public void setStoreId(int storeId) {
+		this.storeId = storeId;
+	}
+
+	public Date getUpdDate() {
+		return this.updDate;
+	}
+
+	public void setUpdDate(Date updDate) {
+		this.updDate = updDate;
+	}
+
+	public int getIsAddRetail() {
+		return isAddRetail;
+	}
+
+	public void setIsAddRetail(int isAddRetail) {
+		this.isAddRetail = isAddRetail;
+	}
+
+	public BigDecimal getStoreIncome() {
+		return storeIncome;
+	}
+
+	public void setStoreIncome(BigDecimal storeIncome) {
+		this.storeIncome = storeIncome;
+	}
+
+	public BigDecimal getRetailInitPrice() {
+		return retailInitPrice;
+	}
+
+	public void setRetailInitPrice(BigDecimal retailInitPrice) {
+		this.retailInitPrice = retailInitPrice;
+	}
+
+	public BigDecimal getRetailSalePrice() {
+		return retailSalePrice;
+	}
+
+	public void setRetailSalePrice(BigDecimal retailSalePrice) {
+		this.retailSalePrice = retailSalePrice;
+	}
+
+	public BigDecimal getRetailPriceLow() {
+		return retailPriceLow;
+	}
+
+	public void setRetailPriceLow(BigDecimal retailPriceLow) {
+		this.retailPriceLow = retailPriceLow;
+	}
+
+	public BigDecimal getRetailPriceHigh() {
+		return retailPriceHigh;
+	}
+
+	public void setRetailPriceHigh(BigDecimal retailPriceHigh) {
+		this.retailPriceHigh = retailPriceHigh;
+	}
+
+	public int getGoodsVerify() {
+		return goodsVerify;
+	}
+
+	public void setGoodsVerify(int goodsVerify) {
+		this.goodsVerify = goodsVerify;
+	}
+	
+	
+
+}

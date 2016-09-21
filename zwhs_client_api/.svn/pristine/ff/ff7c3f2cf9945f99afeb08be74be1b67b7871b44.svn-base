@@ -1,0 +1,27 @@
+package cn.org.citycloud.zwhs.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+
+import cn.org.citycloud.zwhs.entity.StoreOrder;
+
+public interface StoreOrderDao extends JpaRepository<StoreOrder, Integer>, JpaSpecificationExecutor<StoreOrder> {
+	
+	public StoreOrder findByOrderIdAndStoreIdAndMemberId(int id, int storeId, int memberId);
+
+	public List<StoreOrder> findByStoreIdAndMemberIdAndOrderStatusOrderByInsDateDesc(int storeId, int memberId, int status);
+	
+	public List<StoreOrder> findByStoreIdAndMemberIdOrderByInsDateDesc(int storeId, int memberId);
+	
+	public long countByStoreIdAndMemberId(int storeId, int memberId);
+	
+	@Query(value = "SELECT order_status FROM store_order WHERE store_id = ?1 AND member_id = ?2", nativeQuery = true)
+	public List<Byte> countOrderStatus(int store_id, int member_id);
+	
+	public List<StoreOrder> findByStoreIdAndMemberIdAndIsRetailOrderByInsDateDesc(int storeId, int memberId, int isReetail);
+	
+	public List<StoreOrder> findByStoreIdAndMemberIdAndOrderStatusAndIsRetailOrderByInsDateDesc(int storeId, int memberId, int status, int isRetail);
+}

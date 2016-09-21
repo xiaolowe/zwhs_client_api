@@ -1,0 +1,526 @@
+package cn.org.citycloud.zwhs.entity;
+
+import java.io.Serializable;
+import javax.persistence.*;
+import java.math.BigDecimal;
+import java.util.Date;
+
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+
+/**
+ * The persistent class for the store database table.
+ * 
+ */
+@Entity
+@Table(name="store")
+@NamedQuery(name="Store.findAll", query="SELECT s FROM Store s")
+@JsonIgnoreProperties(value = { "hibernateLazyInitializer", "handler" })
+public class Store implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	@Id
+	@Column(name="store_id", unique=true, nullable=false)
+	private int storeId;
+
+	@Column(name="app_id", length=50)
+	@JsonIgnore
+	private String appId;
+
+	@Column(name="app_secret", length=100)
+	@JsonIgnore
+	private String appSecret;
+
+	@Column(name="bank_acc_name", length=50)
+	@JsonIgnore
+	private String bankAccName;
+
+	@Column(name="bank_acc_number", length=50)
+	@JsonIgnore
+	private String bankAccNumber;
+
+	@Column(name="bank_name", length=50)
+	@JsonIgnore
+	private String bankName;
+
+	@Column(name="business_licence", length=50)
+	@JsonIgnore
+	private String businessLicence;
+
+	@Column(name="commis_rates", precision=10, scale=2)
+	@JsonIgnore
+	private BigDecimal commisRates;
+
+	@Column(name="company_address", length=50)
+	private String companyAddress;
+
+	@Column(name="company_fax", length=50)
+	private String companyFax;
+
+	@Column(name="company_name", length=50)
+	private String companyName;
+
+	@Column(name="company_postcode", length=6)
+	private String companyPostcode;
+
+	@Column(name="company_region", length=6)
+	private String companyRegion;
+
+	@Lob
+	private String content;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="create_time")
+	private Date createTime;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="ins_date")
+	private Date insDate;
+
+	@Column(name="joinin_message", length=200)
+	@JsonIgnore
+	private String joininMessage;
+
+	@Column(name="joinin_state", length=50)
+	@JsonIgnore
+	private String joininState;
+
+	@Column(name="organization_code", length=50)
+	@JsonIgnore
+	private String organizationCode;
+
+	@Column(name="owner_card_back", length=50)
+	@JsonIgnore
+	private String ownerCardBack;
+
+	@Column(name="owner_card_front", nullable=false, length=50)
+	@JsonIgnore
+	private String ownerCardFront;
+
+	@Column(name="region_area_name", length=50)
+	private String regionAreaName;
+
+	@Column(name="region_city")
+	private int regionCity;
+
+	@Column(name="region_city_name", length=50)
+	private String regionCityName;
+
+	@Column(name="region_prov")
+	private int regionProv;
+
+	@Column(name="region_prov_name", length=50)
+	private String regionProvName;
+
+	@Column(name="sg_id")
+	@JsonIgnore
+	private byte sgId;
+
+	@Column(name="store_alias_name", length=50)
+	private String storeAliasName;
+
+	@Column(name="store_image", length=50)
+	private String storeImage;
+
+	@Column(name="store_owner", length=50)
+	private String storeOwner;
+
+	@Column(name="store_owner_card", nullable=false, length=50)
+	@JsonIgnore
+	private String storeOwnerCard;
+
+	@Column(name="store_state", nullable=false)
+	private int storeState;
+
+	@Column(name="tax_reg_cert", length=50)
+	private String taxRegCert;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="upd_date")
+	private Date updDate;
+
+	@Column(name="user_phone", length=20)
+	private String userPhone;
+
+	@Column(name="wechar_ent_id", length=50)
+	@JsonIgnore
+	private String wecharEntId;
+
+	@Column(name="wechat_ent_name", length=50)
+	@JsonIgnore
+	private String wechatEntName;
+
+	@Column(name="wechat_id", length=50)
+	@JsonIgnore
+	private String wechatId;
+
+	@Column(name="wechat_token", length=100)
+	@JsonIgnore
+	private String wechatToken;
+
+	@Column(name="wechat_type")
+	@JsonIgnore
+	private byte wechatType;
+
+	@Column(name="wechat_url", length=300)
+	@JsonIgnore
+	private String wechatUrl;
+	
+	@Column(name="store_type")
+	private int storeType;
+	
+	@Column(name="retail_code", length = 50)
+	private String retailCode;
+
+	public Store() {
+	}
+
+	public int getStoreId() {
+		return this.storeId;
+	}
+
+	public void setStoreId(int storeId) {
+		this.storeId = storeId;
+	}
+
+	public String getAppId() {
+		return this.appId;
+	}
+
+	public void setAppId(String appId) {
+		this.appId = appId;
+	}
+
+	public String getAppSecret() {
+		return this.appSecret;
+	}
+
+	public void setAppSecret(String appSecret) {
+		this.appSecret = appSecret;
+	}
+
+	public String getBankAccName() {
+		return this.bankAccName;
+	}
+
+	public void setBankAccName(String bankAccName) {
+		this.bankAccName = bankAccName;
+	}
+
+	public String getBankAccNumber() {
+		return this.bankAccNumber;
+	}
+
+	public void setBankAccNumber(String bankAccNumber) {
+		this.bankAccNumber = bankAccNumber;
+	}
+
+	public String getBankName() {
+		return this.bankName;
+	}
+
+	public void setBankName(String bankName) {
+		this.bankName = bankName;
+	}
+
+	public String getBusinessLicence() {
+		return this.businessLicence;
+	}
+
+	public void setBusinessLicence(String businessLicence) {
+		this.businessLicence = businessLicence;
+	}
+
+	public BigDecimal getCommisRates() {
+		return this.commisRates;
+	}
+
+	public void setCommisRates(BigDecimal commisRates) {
+		this.commisRates = commisRates;
+	}
+
+	public String getCompanyAddress() {
+		return this.companyAddress;
+	}
+
+	public void setCompanyAddress(String companyAddress) {
+		this.companyAddress = companyAddress;
+	}
+
+	public String getCompanyFax() {
+		return this.companyFax;
+	}
+
+	public void setCompanyFax(String companyFax) {
+		this.companyFax = companyFax;
+	}
+
+	public String getCompanyName() {
+		return this.companyName;
+	}
+
+	public void setCompanyName(String companyName) {
+		this.companyName = companyName;
+	}
+
+	public String getCompanyPostcode() {
+		return this.companyPostcode;
+	}
+
+	public void setCompanyPostcode(String companyPostcode) {
+		this.companyPostcode = companyPostcode;
+	}
+
+	public String getCompanyRegion() {
+		return this.companyRegion;
+	}
+
+	public void setCompanyRegion(String companyRegion) {
+		this.companyRegion = companyRegion;
+	}
+
+	public String getContent() {
+		return this.content;
+	}
+
+	public void setContent(String content) {
+		this.content = content;
+	}
+
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	public Date getInsDate() {
+		return this.insDate;
+	}
+
+	public void setInsDate(Date insDate) {
+		this.insDate = insDate;
+	}
+
+	public String getJoininMessage() {
+		return this.joininMessage;
+	}
+
+	public void setJoininMessage(String joininMessage) {
+		this.joininMessage = joininMessage;
+	}
+
+	public String getJoininState() {
+		return this.joininState;
+	}
+
+	public void setJoininState(String joininState) {
+		this.joininState = joininState;
+	}
+
+	public String getOrganizationCode() {
+		return this.organizationCode;
+	}
+
+	public void setOrganizationCode(String organizationCode) {
+		this.organizationCode = organizationCode;
+	}
+
+	public String getOwnerCardBack() {
+		return this.ownerCardBack;
+	}
+
+	public void setOwnerCardBack(String ownerCardBack) {
+		this.ownerCardBack = ownerCardBack;
+	}
+
+	public String getOwnerCardFront() {
+		return this.ownerCardFront;
+	}
+
+	public void setOwnerCardFront(String ownerCardFront) {
+		this.ownerCardFront = ownerCardFront;
+	}
+
+	public String getRegionAreaName() {
+		return this.regionAreaName;
+	}
+
+	public void setRegionAreaName(String regionAreaName) {
+		this.regionAreaName = regionAreaName;
+	}
+
+	public int getRegionCity() {
+		return this.regionCity;
+	}
+
+	public void setRegionCity(int regionCity) {
+		this.regionCity = regionCity;
+	}
+
+	public String getRegionCityName() {
+		return this.regionCityName;
+	}
+
+	public void setRegionCityName(String regionCityName) {
+		this.regionCityName = regionCityName;
+	}
+
+	public int getRegionProv() {
+		return this.regionProv;
+	}
+
+	public void setRegionProv(int regionProv) {
+		this.regionProv = regionProv;
+	}
+
+	public String getRegionProvName() {
+		return this.regionProvName;
+	}
+
+	public void setRegionProvName(String regionProvName) {
+		this.regionProvName = regionProvName;
+	}
+
+	public byte getSgId() {
+		return this.sgId;
+	}
+
+	public void setSgId(byte sgId) {
+		this.sgId = sgId;
+	}
+
+	public String getStoreAliasName() {
+		return this.storeAliasName;
+	}
+
+	public void setStoreAliasName(String storeAliasName) {
+		this.storeAliasName = storeAliasName;
+	}
+
+	public String getStoreImage() {
+		return this.storeImage;
+	}
+
+	public void setStoreImage(String storeImage) {
+		this.storeImage = storeImage;
+	}
+
+	public String getStoreOwner() {
+		return this.storeOwner;
+	}
+
+	public void setStoreOwner(String storeOwner) {
+		this.storeOwner = storeOwner;
+	}
+
+	public String getStoreOwnerCard() {
+		return this.storeOwnerCard;
+	}
+
+	public void setStoreOwnerCard(String storeOwnerCard) {
+		this.storeOwnerCard = storeOwnerCard;
+	}
+
+	public int getStoreState() {
+		return this.storeState;
+	}
+
+	public void setStoreState(int storeState) {
+		this.storeState = storeState;
+	}
+
+	public String getTaxRegCert() {
+		return this.taxRegCert;
+	}
+
+	public void setTaxRegCert(String taxRegCert) {
+		this.taxRegCert = taxRegCert;
+	}
+
+	public Date getUpdDate() {
+		return this.updDate;
+	}
+
+	public void setUpdDate(Date updDate) {
+		this.updDate = updDate;
+	}
+
+	public String getUserPhone() {
+		return this.userPhone;
+	}
+
+	public void setUserPhone(String userPhone) {
+		this.userPhone = userPhone;
+	}
+
+	public String getWecharEntId() {
+		return this.wecharEntId;
+	}
+
+	public void setWecharEntId(String wecharEntId) {
+		this.wecharEntId = wecharEntId;
+	}
+
+	public String getWechatEntName() {
+		return this.wechatEntName;
+	}
+
+	public void setWechatEntName(String wechatEntName) {
+		this.wechatEntName = wechatEntName;
+	}
+
+	public String getWechatId() {
+		return this.wechatId;
+	}
+
+	public void setWechatId(String wechatId) {
+		this.wechatId = wechatId;
+	}
+
+	public String getWechatToken() {
+		return this.wechatToken;
+	}
+
+	public void setWechatToken(String wechatToken) {
+		this.wechatToken = wechatToken;
+	}
+
+	public byte getWechatType() {
+		return this.wechatType;
+	}
+
+	public void setWechatType(byte wechatType) {
+		this.wechatType = wechatType;
+	}
+
+	public String getWechatUrl() {
+		return this.wechatUrl;
+	}
+
+	public void setWechatUrl(String wechatUrl) {
+		this.wechatUrl = wechatUrl;
+	}
+
+	public int getStoreType() {
+		return storeType;
+	}
+
+	public void setStoreType(int storeType) {
+		this.storeType = storeType;
+	}
+
+	public String getRetailCode() {
+		return retailCode;
+	}
+
+	public void setRetailCode(String retailCode) {
+		this.retailCode = retailCode;
+	}
+	
+	
+
+}

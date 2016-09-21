@@ -1,0 +1,158 @@
+package cn.org.citycloud.zwhs.service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Order;
+import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import cn.org.citycloud.zwhs.bean.GoodsSearch;
+import cn.org.citycloud.zwhs.constants.Constants;
+import cn.org.citycloud.zwhs.entity.StoreGood;
+import cn.org.citycloud.zwhs.repository.StoreGoodsDao;
+
+//Spring Bean的标识.
+@Component
+// 类中所有public函数都纳入事务管理的标识.
+@Transactional
+public class StoreGoodService {
+
+	@Autowired
+	private StoreGoodsDao storeGoodsDao;
+
+	public Page<StoreGood> getStoreGoodList(Pageable pageable, final GoodsSearch goodsSearch, final int store_id) {
+
+		// 关键字搜索商品
+		Page<StoreGood> page = storeGoodsDao.findAll(new Specification<StoreGood>() {
+
+			@Override
+			public Predicate toPredicate(Root<StoreGood> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+
+				Predicate where = cb.conjunction();
+
+				// 店铺Id
+				Path<Integer> storeId = root.get("storeId");
+				where = cb.and(where, cb.equal(storeId, store_id));
+
+				// 商品是上架状态
+				Path<Integer> goodsState = root.get("goodsState");
+				where = cb.and(where, cb.equal(goodsState, Constants.GOODS_STATE_NORMAL));
+
+				// 自动下架时间
+				Path<Date> offlineTime = root.get("offlineTime");
+				where = cb.and(where, cb.greaterThan(offlineTime, new Date()));
+
+				// 关键字匹配
+				if (StringUtils.isNotEmpty(goodsSearch.getKeyword())) {
+					Path<String> brandName = root.get("brandName");
+					where = cb.and(where, cb.like(brandName, "%" + goodsSearch.getKeyword() + "%"));
+
+					Path<String> goodsName = root.get("goodsName");
+					where = cb.and(where, cb.like(goodsName, "%" + goodsSearch.getKeyword() + "%"));
+
+					Path<String> gcName = root.get("gcName");
+					where = cb.and(where, cb.like(gcName, "%" + goodsSearch.getKeyword() + "%"));
+
+					Path<String> gcLitName = root.get("gcLitName");
+					where = cb.and(where, cb.like(gcLitName, "%" + goodsSearch.getKeyword() + "%"));
+
+					Path<String> goodsSpec = root.get("goodsSpec");
+					where = cb.and(where, cb.like(goodsSpec, "%" + goodsSearch.getKeyword() + "%"));
+
+					Path<String> goodsAttr = root.get("goodsAttr");
+					where = cb.and(where, cb.like(goodsAttr, "%" + goodsSearch.getKeyword() + "%"));
+				}
+				query.where(where);
+
+				List<Order> orderList = new ArrayList<Order>();
+
+				Path<Integer> isRecommend = root.get("isRecommend");
+				Order isRecommendOrder = cb.desc(isRecommend);
+
+				orderList.add(isRecommendOrder);
+
+				// 最新：1；最热：2
+				if (1 == goodsSearch.getSort()) {
+
+					Path<Date> insDate = root.get("insDate");
+					Order insDateOrder = cb.desc(insDate);
+					orderList.add(insDateOrder);
+
+				} else if (2 == goodsSearch.getSort()) {
+					Path<Integer> sellNumber = root.get("sellNumber");
+					Order sellNumberOrder = cb.desc(sellNumber);
+
+					orderList.add(sellNumberOrder);
+
+				}
+
+				// 排序
+				query.orderBy(orderList);
+
+				return null;
+			}
+
+		}, pageable);
+
+		return page;
+
+	}
+	
+	/**
+	 * 获取分销商品列表
+	 * @param pageable
+	 * @param goodsSearch
+	 * @param store_id
+	 * @return
+	 */
+	public Page<StoreGood> getRetailStoreGoodList(Pageable pageable, String goodsName, final int store_id) {
+
+		// 关键字搜索商品
+		Page<StoreGood> page = storeGoodsDao.findAll(new Specification<StoreGood>() {
+
+			@Override
+			public Predicate toPredicate(Root<StoreGood> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+
+				Predicate where = cb.conjunction();
+
+				// 店铺Id
+				Path<Integer> storeId = root.get("storeId");
+				where = cb.and(where, cb.equal(storeId, store_id));
+				
+				Path<Integer> isAddRetail = root.get("isAddRetail");
+				where = cb.and(where, cb.equal(isAddRetail, 1));	// 0 否   1 是
+				
+				Path<Integer> goodsVerify = root.get("goodsVerify");
+				where = cb.and(where, cb.equal(goodsVerify, 1));	// 0 未审核   1 已审核
+
+				if(StringUtils.isNotBlank(goodsName)){
+					Path<String> goodsNameQuery = root.get("goodsName");  
+					where = cb.and(where, cb.like(goodsNameQuery, "%"+goodsName+"%"));
+					
+				}
+
+				query.where(where);
+
+				return null;
+			}
+
+		}, pageable);
+
+		return page;
+
+	}
+
+}

@@ -1,0 +1,194 @@
+package cn.org.citycloud.zwhs.controller;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+import cn.org.citycloud.zwhs.bean.OrderCoupon;
+import cn.org.citycloud.zwhs.constants.Constants;
+import cn.org.citycloud.zwhs.constants.ErrorCodes;
+import cn.org.citycloud.zwhs.core.BaseController;
+import cn.org.citycloud.zwhs.entity.StoreCoupon;
+import cn.org.citycloud.zwhs.entity.WechatMemberCoupon;
+import cn.org.citycloud.zwhs.exception.BusinessErrorException;
+import cn.org.citycloud.zwhs.repository.StoreCouponDao;
+import cn.org.citycloud.zwhs.repository.WechatMemberCouponDao;
+import cn.org.citycloud.zwhs.service.CouponService;
+
+/**
+ * 优惠劵
+ * 
+ * @author lanbo
+ *
+ */
+@RestController
+public class CouponController extends BaseController {
+
+	@Autowired
+	private StoreCouponDao storeCouponDao;
+
+	@Autowired
+	private WechatMemberCouponDao memberCouponDao;
+	
+	@Autowired
+	private CouponService couponService;
+	
+	/**
+	 * 母婴店优惠劵领取
+	 * 
+	 * @throws BusinessErrorException
+	 */
+	@RequestMapping(value = "/myCoupon/{coupon_id}", method = RequestMethod.POST)
+	public void receiveStoreCoupon(@PathVariable int coupon_id)
+			throws BusinessErrorException {
+
+		// 母婴店优惠劵信息
+		StoreCoupon coupon = storeCouponDao.findOne(coupon_id);
+
+		if (coupon == null) {
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"此优惠劵已经失效了。");
+		}
+		
+		if(coupon.getStoreId() != getStoreId()) {
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"此优惠劵在当前店铺无法领取。");
+		}
+		
+
+		if (Constants.COUPON_STATUS_INVALID == coupon.getCouponStatus()) {
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"此优惠劵已经失效了。");
+		}
+
+		Date now = new Date();
+		// 生效时间
+		Date effectiveTime = coupon.getEffectiveTime();
+
+		if (now.getTime() < effectiveTime.getTime()) {
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"此优惠劵还没有生效。");
+		}
+
+		// 过期时间
+		Date expirationTime = coupon.getExpirationTime();
+		if (now.getTime() > expirationTime.getTime()) {
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"此优惠劵已经过期了。");
+		}
+
+		int couponLimit = coupon.getCouponLimit();
+
+		// 优惠劵 已经领完了
+		if (coupon.getCouponNumber() <= coupon.getCouponAmount()) {
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"此优惠劵已经领完了。");
+
+		}
+
+		// 已经领取了母婴店优惠劵
+		long countCoupon = memberCouponDao
+				.countByCouponIdAndMemberIdAndStoreId(coupon_id, getMemberId(),
+						getStoreId());
+
+		if (couponLimit == 1 && countCoupon == couponLimit) {
+
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"您已经领取过此优惠劵。");
+		}
+		if (couponLimit > 1 && countCoupon == couponLimit) {
+
+			throw new BusinessErrorException(ErrorCodes.COUPON_ERROR,
+					"您已经达到此优惠劵领取限额。");
+		}
+
+		// 插入会员优惠劵
+		WechatMemberCoupon memberCoupon = new WechatMemberCoupon();
+		memberCoupon.setCouponId(coupon_id);
+		memberCoupon.setMemberId(getMemberId());
+		memberCoupon.setStoreId(coupon.getStoreId());
+		memberCoupon.setIsUsed(10);
+		memberCoupon.setInsDate(now);
+		memberCoupon.setUpdDate(now);
+
+		couponService.addMemberCoupon(memberCoupon);
+	}
+
+	/**
+	 * 我的优惠劵列表
+	 */
+	@RequestMapping(value = "/myCoupon", method = RequestMethod.GET)
+	public Object getMemberCouponList() {
+
+		List<WechatMemberCoupon> myCouponList = memberCouponDao
+				.findByMemberIdAndStoreId(getMemberId(), getStoreId());
+
+		return myCouponList;
+	}
+	
+	/**
+	 * 订单可用优惠劵
+	 */
+	@RequestMapping(value = "/myCoupon/available/{goodsAmount}", method = RequestMethod.GET)
+	public Object getOrderCouponList(@PathVariable int goodsAmount) {
+
+		List<Object> tempCouponList = memberCouponDao.getOrderCoupon(getMemberId(), getStoreId(), goodsAmount);
+
+		List<OrderCoupon> myCouponList = new ArrayList<OrderCoupon>();
+		
+		for(int i = 0; i < tempCouponList.size() ; i++){
+			Object[] objArray = (Object[])tempCouponList.get(i);
+			
+			OrderCoupon bean = new OrderCoupon();
+			bean.setCouponId((Integer)objArray[0]);
+			bean.setCouponName((String)objArray[1]);
+			
+			myCouponList.add(bean);
+		}
+		
+		return myCouponList;
+	}
+
+	/**
+	 * 优惠劵详情
+	 */
+	@RequestMapping(value = "/myCoupon/{id}", method = RequestMethod.GET)
+	public Object getMemberCouponDetail(@PathVariable int id) {
+
+		WechatMemberCoupon coupon = memberCouponDao
+				.findByIdAndMemberIdAndStoreId(id, getMemberId(),
+						getStoreId());
+
+		return coupon;
+	}
+	
+	/**
+	 * 店铺优惠劵列表
+	 */
+	@RequestMapping(value = "/couponList/{store_id}", method = RequestMethod.GET)
+	public Object getStoreCouponList(@PathVariable int store_id) {
+
+		List<StoreCoupon> couponList = storeCouponDao.findByStoreId(store_id);
+
+		return couponList;
+	}
+	
+	
+	/**
+	 * 优惠劵信息
+	 */
+	@RequestMapping(value = "/coupon/{coupon_id}", method = RequestMethod.GET)
+	public Object getStoreCouponInfo(@PathVariable int coupon_id) {
+
+		StoreCoupon coupon = storeCouponDao.findOne(coupon_id);
+
+		return coupon;
+	}
+
+}

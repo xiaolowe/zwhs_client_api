@@ -1,0 +1,53 @@
+package cn.org.citycloud.zwhs.bean;
+
+
+import org.hibernate.validator.constraints.NotBlank;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+
+@ApiModel(value="修改分销店铺Model", description="修改分销店铺接口数据Model")
+public class RetailShopModifyBean  {
+	
+	
+	@NotBlank(message = "店铺名称不能为空")
+	@ApiModelProperty(value="店铺名称", required=true)
+	private String retailShop;
+	
+	@NotBlank(message = "店铺LOGO不能为空")
+	@ApiModelProperty(value="店铺LOGO", required=true)
+	private String logoImage;
+	
+	@NotBlank(message = "店铺背景不能为空")
+	@ApiModelProperty(value="店铺背景", required=true)
+	private String bannerImage;
+
+	public String getRetailShop() {
+		return retailShop;
+	}
+
+	public void setRetailShop(String retailShop) {
+		this.retailShop = retailShop;
+	}
+
+	public String getLogoImage() {
+		return logoImage;
+	}
+
+	public void setLogoImage(String logoImage) {
+		this.logoImage = logoImage;
+	}
+
+	public String getBannerImage() {
+		return bannerImage;
+	}
+
+	public void setBannerImage(String bannerImage) {
+		this.bannerImage = bannerImage;
+	}
+	
+	
+	
+
+
+}

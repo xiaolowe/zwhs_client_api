@@ -1,0 +1,133 @@
+package cn.org.citycloud.zwhs.controller;
+
+import cn.org.citycloud.zwhs.bean.WxConfig;
+import cn.org.citycloud.zwhs.bean.WxParam;
+import cn.org.citycloud.zwhs.constants.Constants;
+import cn.org.citycloud.zwhs.core.BaseController;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import net.rubyeye.xmemcached.MemcachedClient;
+import net.rubyeye.xmemcached.exception.MemcachedException;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.client.fluent.Request;
+import org.apache.http.client.fluent.Response;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
+
+/**
+ * desc the file.
+ *
+ * @author demon
+ * @Date 2016/7/20 9:39
+ */
+@Controller
+public class WxSignatureController extends BaseController {
+
+    @Autowired
+    private MemcachedClient memcachedClient;
+
+    /**
+     * 获取微信config
+     *
+     * @param param 前台传传入url:当前网页的URL，不包含#及其后面部分
+     * @return
+     * @throws InterruptedException
+     * @throws TimeoutException
+     * @throws MemcachedException
+     * @throws IOException
+     */
+    @RequestMapping(value = "/wxConfig", method = RequestMethod.POST)
+    @ResponseBody
+    public Object getWxConfig(@RequestBody WxParam param) throws InterruptedException, TimeoutException, MemcachedException, IOException {
+        String noncestr = UUID.randomUUID().toString();
+        WxConfig config = new WxConfig();
+        config.setAppId(Constants.API_ID);
+        config.setNonceStr(noncestr);
+        config.setTimestamp(String.valueOf(System.currentTimeMillis() / 1000));
+        config.setSignature(DigestUtils.sha1Hex(assembleParam(param.getUrl(), config)));
+        config.setUrl(param.getUrl());
+        config.setJsapiTicket(getJsapiTicket());
+        config.setMemberId(getMemberId());
+        return config;
+    }
+
+    /**
+     * 获取access_token
+     *
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws MemcachedException
+     * @throws TimeoutException
+     */
+    private String getAccessTokens() throws IOException, InterruptedException, MemcachedException, TimeoutException {
+        String accessToken = memcachedClient.get("access_token");
+        if (accessToken != null) {
+            return accessToken;
+        } else {
+            Request request = Request.Get(Constants.URL_ACCESS_TOKEN);
+            Response response = request.execute();
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> accessTokenMap = mapper.readValue(response.returnContent().toString(), Map.class);
+            accessToken = (String) accessTokenMap.get("access_token");
+            memcachedClient.set("access_token", (int)accessTokenMap.get("expires_in"), accessToken);
+        }
+        return accessToken;
+    }
+
+    /**
+     * 通过access_token获取jsapi_ticket
+     *
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws MemcachedException
+     * @throws TimeoutException
+     */
+    private String getJsapiTicket() throws IOException, InterruptedException, MemcachedException, TimeoutException {
+        String ticket = memcachedClient.get("ticket");
+        if (ticket != null) {
+            return ticket;
+        } else {
+            StringBuilder url = new StringBuilder(Constants.URL_JSAPI_TICKET);
+            url.append("access_token=");
+            url.append(getAccessTokens());
+            url.append("&type=jsapi");
+            Request request = Request.Get(url.toString());
+            Response response = request.execute();
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> jsApiTicketStr = mapper.readValue(response.returnContent().toString(), Map.class);
+            ticket = (String) jsApiTicketStr.get("ticket");
+            memcachedClient.set("ticket", (int)jsApiTicketStr.get("expires_in"), ticket);
+        }
+        return ticket;
+    }
+
+    /**
+     * 获取组装的参数string，用于生成加密串
+     *
+     * @param url 前台传入的url:当前网页的URL，不包含#及其后面部分
+     * @return
+     * @throws InterruptedException
+     * @throws TimeoutException
+     * @throws MemcachedException
+     * @throws IOException
+     */
+    private String assembleParam(String url, WxConfig config) throws InterruptedException, TimeoutException, MemcachedException, IOException {
+        String ticket = getJsapiTicket();
+        StringBuilder param = new StringBuilder("jsapi_ticket=");
+        param.append(ticket);
+        param.append("&noncestr=");
+        param.append(config.getNonceStr());
+        param.append("&timestamp=");
+        param.append(config.getTimestamp());
+        param.append("&url=");
+        param.append(url);
+        return param.toString();
+    }
+}

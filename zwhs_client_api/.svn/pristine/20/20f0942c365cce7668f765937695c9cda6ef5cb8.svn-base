@@ -1,0 +1,629 @@
+package cn.org.citycloud.zwhs.controller;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+
+import net.rubyeye.xmemcached.exception.MemcachedException;
+
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import cn.org.citycloud.zwhs.bean.OrderGoods;
+import cn.org.citycloud.zwhs.bean.PayOrder;
+import cn.org.citycloud.zwhs.bean.PreOrder;
+import cn.org.citycloud.zwhs.constants.Constants;
+import cn.org.citycloud.zwhs.constants.ErrorCodes;
+import cn.org.citycloud.zwhs.core.BaseController;
+import cn.org.citycloud.zwhs.entity.FinAcc;
+import cn.org.citycloud.zwhs.entity.OrderGood;
+import cn.org.citycloud.zwhs.entity.StoreGood;
+import cn.org.citycloud.zwhs.entity.StoreOrder;
+import cn.org.citycloud.zwhs.entity.StorePay;
+import cn.org.citycloud.zwhs.entity.WechatMember;
+import cn.org.citycloud.zwhs.exception.BusinessErrorException;
+import cn.org.citycloud.zwhs.repository.FinAccDao;
+import cn.org.citycloud.zwhs.repository.OrderGoodDao;
+import cn.org.citycloud.zwhs.repository.StoreGoodsDao;
+import cn.org.citycloud.zwhs.repository.StoreOrderDao;
+import cn.org.citycloud.zwhs.repository.StorePayDao;
+import cn.org.citycloud.zwhs.service.OrderService;
+import cn.org.citycloud.zwhs.service.WechatMemberService;
+import cn.org.citycloud.zwhs.utils.IPUtil;
+import cn.org.citycloud.zwhs.utils.PropertiesLoader;
+import cn.org.citycloud.zwhs.utils.WeChatUtil;
+import cn.org.citycloud.zwhs.utils.WeixinUtil;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.cuter44.wxpay.WxpayFactory;
+import com.github.cuter44.wxpay.constants.TradeType;
+import com.github.cuter44.wxpay.reqs.GetBrandWCPayRequest;
+import com.github.cuter44.wxpay.reqs.UnifiedOrder;
+import com.github.cuter44.wxpay.resps.Notify;
+import com.github.cuter44.wxpay.resps.UnifiedOrderResponse;
+
+/**
+ * 微信支付相关API
+ * 
+ * @author lanbo
+ *
+ */
+@Controller
+@Api(tags="微信支付",  description = "微信支付", consumes="application/json")
+public class WxPayController extends BaseController
+{
+    
+    private static Logger logger = Logger.getLogger(WxPayController.class);
+    
+    @Autowired
+    private OrderService orderService;
+    
+    @Autowired
+    private WechatMemberService memberService;
+    
+    @Autowired
+    private StorePayDao storePayDao;
+    
+    @Autowired
+    private StoreOrderDao orderDao;
+    
+    @Autowired
+    private OrderGoodDao orderGoodDao;
+    
+    @Autowired
+    private StoreGoodsDao goodsDao;
+    
+    @Autowired
+    private FinAccDao finAccDao;
+    
+    /**
+     * 前端调用 返回微信支付预订单信息
+     * 
+     * @throws BusinessErrorException
+     * @throws IOException
+     * @throws MemcachedException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
+    @RequestMapping(value = "/wxPayOrders", method = RequestMethod.POST)
+    @ResponseBody
+    public Object submitOrder(@Valid @RequestBody PreOrder order, HttpServletRequest request)
+        throws BusinessErrorException, IOException, TimeoutException, InterruptedException
+    {
+        
+        // 判断是否微信环境, 5.0 之后的支持微信支付
+        if (!WeChatUtil.isWeiXin(request))
+        {
+            throw new BusinessErrorException(ErrorCodes.INVALID_PARAMETER, "微信5.0以下不支持微信支付！");
+        }
+        
+        // 生成预订单
+        // 订单商品
+        List<OrderGoods> orderGoods = order.getOrderGoods();
+        
+        if (orderGoods.size() == 0)
+        {
+            throw new BusinessErrorException(ErrorCodes.PARAM_ERROR, "此订单没有商品数据！");
+        }
+        
+        // 1.生成商户预订单
+        StoreOrder newPreOrder = orderService.generateOrder(order, getStoreId(), getMemberId());
+        
+        // 2.调用统一下单API
+        WxpayFactory wxpayFactory = WxpayFactory.getDefaultInstance();
+        
+        // 对商品名截取, 去除空格
+        String productName = order.getProductName() + newPreOrder.getOrderId();
+        productName = productName.replaceAll(" ", "");
+        productName = productName.length() > 17 ? productName.substring(0, 17) + "..." : productName;
+        
+        // 总金额(分)
+        int totalFee = newPreOrder.getOrderAmount().multiply(new BigDecimal(100)).intValue();
+        // 测试支付1分
+        // int totalFee = 1;
+        UnifiedOrder wxOrder =
+            wxpayFactory.newUnifiedOrder()
+                .setBody(productName)
+                .setTotalFee(totalFee)
+                .setOpenid(getOpenId())
+                .setOutTradeNo(String.valueOf(newPreOrder.getOrderId()))
+                .setSpbillCreateIp(IPUtil.getIp(request))
+                .setTradeType(TradeType.JSAPI)
+                .build()
+                .sign();
+        
+        // 3.返回预付订单信息
+        // 执行该请求以取得返回值(主要是prepay_id)
+        UnifiedOrderResponse orderResp = wxOrder.execute();
+        
+        // 创建第二步使用的请求
+        GetBrandWCPayRequest gbwxpr = wxpayFactory.newGetBrandWCPayRequest(orderResp.getProperties()).build().sign();
+        
+        String jsonGbwxpr = gbwxpr.toJSON();
+        
+        ObjectMapper mapper = new ObjectMapper();
+        @SuppressWarnings("unchecked")
+        Map<String, String> orderSubmit = (Map<String, String>)mapper.readValue(jsonGbwxpr, HashMap.class);
+        
+        // 统一下单接口返回的prepay_id参数值
+        String prepayPackage = orderSubmit.get("package");
+        
+        // 更新订单的rey_pay以防需要再次支付
+        newPreOrder.setPrePay(prepayPackage);
+        orderDao.save(newPreOrder);
+        
+        orderSubmit.put("orderId", String.valueOf(newPreOrder.getOrderId()));
+        
+        return orderSubmit;
+    }
+    
+    /**
+     * 前端调用 返回微信支付预订单信息(分销)
+     * 
+     * @throws BusinessErrorException
+     * @throws IOException
+     * @throws MemcachedException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
+    @RequestMapping(value = "/wxPayOrdersRetail", method = RequestMethod.POST)
+    @ResponseBody
+    @ApiOperation(value = " 返回微信支付预订单信息(分销)", notes = " 返回微信支付预订单信息(分销)")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+    public Object submitOrderRetail(@Valid @RequestBody PreOrder order, HttpServletRequest request)
+        throws BusinessErrorException, IOException, TimeoutException, InterruptedException
+    {
+        
+        // 判断是否微信环境, 5.0 之后的支持微信支付
+        if (!WeChatUtil.isWeiXin(request))
+        {
+            throw new BusinessErrorException(ErrorCodes.INVALID_PARAMETER, "微信5.0以下不支持微信支付！");
+        }
+        
+        // 生成预订单
+        // 订单商品
+        List<OrderGoods> orderGoods = order.getOrderGoods();
+        
+        if (orderGoods.size() == 0)
+        {
+            throw new BusinessErrorException(ErrorCodes.PARAM_ERROR, "此订单没有商品数据！");
+        }
+        
+        // 1.生成商户预订单
+        StoreOrder newPreOrder = orderService.generateOrderRetail(order, getStoreId(), getMemberId());
+        
+        // 2.调用统一下单API
+        WxpayFactory wxpayFactory = WxpayFactory.getDefaultInstance();
+        
+        // 对商品名截取, 去除空格
+        String productName = order.getProductName() + newPreOrder.getOrderId();
+        productName = productName.replaceAll(" ", "");
+        productName = productName.length() > 17 ? productName.substring(0, 17) + "..." : productName;
+        
+        // 总金额(分)
+        int totalFee = newPreOrder.getOrderAmount().multiply(new BigDecimal(100)).intValue();
+        // 测试支付1分
+        // int totalFee = 1;
+        UnifiedOrder wxOrder =
+            wxpayFactory.newUnifiedOrder()
+                .setBody(productName)
+                .setTotalFee(totalFee)
+                .setOpenid(getOpenId())
+                .setOutTradeNo(String.valueOf(newPreOrder.getOrderId()))
+                .setSpbillCreateIp(IPUtil.getIp(request))
+                .setTradeType(TradeType.JSAPI)
+                .build()
+                .sign();
+        
+        // 3.返回预付订单信息
+        // 执行该请求以取得返回值(主要是prepay_id)
+        UnifiedOrderResponse orderResp = wxOrder.execute();
+        
+        // 创建第二步使用的请求
+        GetBrandWCPayRequest gbwxpr = wxpayFactory.newGetBrandWCPayRequest(orderResp.getProperties()).build().sign();
+        
+        String jsonGbwxpr = gbwxpr.toJSON();
+        
+        ObjectMapper mapper = new ObjectMapper();
+        @SuppressWarnings("unchecked")
+        Map<String, String> orderSubmit = (Map<String, String>)mapper.readValue(jsonGbwxpr, HashMap.class);
+        
+        // 统一下单接口返回的prepay_id参数值
+        String prepayPackage = orderSubmit.get("package");
+        
+        // 更新订单的rey_pay以防需要再次支付
+        newPreOrder.setPrePay(prepayPackage);
+        orderDao.save(newPreOrder);
+        
+        orderSubmit.put("orderId", String.valueOf(newPreOrder.getOrderId()));
+        
+        return orderSubmit;
+    }
+    
+    /**
+     * 前端调用 返回微信支付预订单信息(分销)
+     * 测试使用
+     * @throws BusinessErrorException
+     * @throws IOException
+     * @throws MemcachedException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
+    @RequestMapping(value = "/wxPayOrdersRetailTest", method = RequestMethod.POST)
+    @ResponseBody
+    @ApiOperation(value = " 返回微信支付预订单信息(分销测试)", notes = " 返回微信支付预订单信息(分销测试)")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+    public Object submitOrderRetailTest(@Valid @RequestBody PreOrder order, HttpServletRequest request)
+        throws BusinessErrorException, IOException, TimeoutException, InterruptedException
+    {
+        
+        // 判断是否微信环境, 5.0 之后的支持微信支付
+//        if (!WeChatUtil.isWeiXin(request))
+//        {
+//            throw new BusinessErrorException(ErrorCodes.INVALID_PARAMETER, "微信5.0以下不支持微信支付！");
+//        }
+        
+        // 生成预订单
+        // 订单商品
+        List<OrderGoods> orderGoods = order.getOrderGoods();
+        
+        if (orderGoods.size() == 0)
+        {
+            throw new BusinessErrorException(ErrorCodes.PARAM_ERROR, "此订单没有商品数据！");
+        }
+        logger.info("会员id="+getMemberId());
+        // 1.生成商户预订单
+        StoreOrder newPreOrder = orderService.generateOrderRetail(order, getStoreId(), getMemberId());
+        
+        // 2.调用统一下单API
+//        WxpayFactory wxpayFactory = WxpayFactory.getDefaultInstance();
+        
+        // 对商品名截取, 去除空格
+        String productName = order.getProductName() + newPreOrder.getOrderId();
+        productName = productName.replaceAll(" ", "");
+        productName = productName.length() > 17 ? productName.substring(0, 17) + "..." : productName;
+        
+        // 总金额(分)
+        int totalFee = newPreOrder.getOrderAmount().multiply(new BigDecimal(100)).intValue();
+        // 测试支付1分
+        // int totalFee = 1;
+//        UnifiedOrder wxOrder =
+//            wxpayFactory.newUnifiedOrder()
+//                .setBody(productName)
+//                .setTotalFee(totalFee)
+//                .setOpenid(getOpenId())
+//                .setOutTradeNo(String.valueOf(newPreOrder.getOrderId()))
+//                .setSpbillCreateIp(IPUtil.getIp(request))
+//                .setTradeType(TradeType.JSAPI)
+//                .build()
+//                .sign();
+        
+        // 3.返回预付订单信息
+        // 执行该请求以取得返回值(主要是prepay_id)
+//        UnifiedOrderResponse orderResp = wxOrder.execute();
+        
+        // 创建第二步使用的请求
+//        GetBrandWCPayRequest gbwxpr = wxpayFactory.newGetBrandWCPayRequest(orderResp.getProperties()).build().sign();
+        
+//        String jsonGbwxpr = gbwxpr.toJSON();
+        
+//        ObjectMapper mapper = new ObjectMapper();
+//        @SuppressWarnings("unchecked")
+//        Map<String, String> orderSubmit = (Map<String, String>)mapper.readValue(jsonGbwxpr, HashMap.class);
+        
+        Map<String, String> orderSubmit = new HashMap<String, String>();
+        
+        // 统一下单接口返回的prepay_id参数值
+//        String prepayPackage = orderSubmit.get("package");
+        
+        // 更新订单的rey_pay以防需要再次支付
+//        newPreOrder.setPrePay(prepayPackage);
+        newPreOrder.setOrderStatus(Constants.ORDER_STATUS_PAYED);
+        
+        orderDao.save(newPreOrder);
+       
+        orderSubmit.put("orderId", String.valueOf(newPreOrder.getOrderId()));
+        orderSubmit.put("orderStatus", String.valueOf(Constants.ORDER_STATUS_PAYED));
+        
+        return orderSubmit;
+    }
+    
+    /**
+     * 前端调用 返回微信未支付订单信息
+     * 
+     * @throws BusinessErrorException
+     * @throws IOException
+     * @throws MemcachedException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
+    @RequestMapping(value = "/wxRetryPayOrders", method = RequestMethod.POST)
+    @ResponseBody
+    @ApiOperation(value = "返回已存在订单(支付)", notes = "返回已存在订单(支付)")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+    public Object payOrder(@Valid @RequestBody PayOrder order, HttpServletRequest request, HttpServletResponse response)
+        throws BusinessErrorException, IOException, TimeoutException, InterruptedException
+    {
+        
+        // 判断是否微信环境, 5.0 之后的支持微信支付
+        if (!WeChatUtil.isWeiXin(request))
+        {
+            throw new BusinessErrorException(ErrorCodes.INVALID_PARAMETER, "微信5.0以下不支持微信支付！");
+        }
+        
+        // 已经提交的订单信息
+        StoreOrder newPreOrder = orderService.findStoreOrderById(getStoreId(), getMemberId(), order.getOrderId());
+        
+        // 订单不是 可支付状态
+        if (Constants.ORDER_STATUS_DEFAULT != newPreOrder.getOrderStatus())
+        {
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "此订单已经支付或者无法支付");
+        }
+        
+        // 订单已经过期 关闭此订单
+        // 提交超过1个小时的订单 自动关闭
+        Date insDate = newPreOrder.getInsDate();
+        if (insDate.getTime() - insDate.getTime() > 1000 * 3600)
+        {
+            // 关闭此订单
+            newPreOrder.setPrePay(null);
+            newPreOrder.setOrderStatus(Constants.ORDER_STATUS_CANCELD);
+            orderDao.save(newPreOrder);
+            
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "超过1个小时未支付的订单自动关闭");
+        }
+        
+        // 对商品名截取, 去除空格
+        String productName = order.getProductName() + newPreOrder.getOrderId();
+        productName = productName.replaceAll(" ", "");
+        productName = productName.length() > 17 ? productName.substring(0, 17) + "..." : productName;
+        
+        // 生成预订单支付参数
+        // 统一下单接口返回的prepay_id参数值
+        String prepayPackage = newPreOrder.getPrePay();
+        String nonce_str = RandomStringUtils.randomAlphanumeric(30);
+        
+        // 时间戳
+        String timeStamp = String.valueOf(System.currentTimeMillis() / 1000);
+        
+        String paySign = WeixinUtil.paySign(timeStamp, nonce_str, prepayPackage);
+        
+        Map<String, String> orderSubmit = new HashMap<String, String>();
+        orderSubmit.put("appId", Constants.API_ID);
+        orderSubmit.put("nonceStr", nonce_str);
+        orderSubmit.put("package", prepayPackage);
+        orderSubmit.put("signType", "MD5");
+        orderSubmit.put("paySign", paySign);
+        orderSubmit.put("timeStamp", timeStamp);
+        orderSubmit.put("orderId", String.valueOf(newPreOrder.getOrderId()));
+        
+        return orderSubmit;
+        
+    }
+    
+    /**
+     * 微信支付成功后(支付结果通用通知)回调
+     * 
+     * @param req
+     * @param resp
+     * @throws IOException
+     */
+    @RequestMapping(value = "/wxPayNotify", method = RequestMethod.POST)
+    @ApiOperation(value = "微信支付成功后回调", notes = "微信支付成功后回调")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+    public void wxPayNotify(HttpServletRequest req, HttpServletResponse resp)
+        throws IOException
+    {
+        
+        logger.info("wxPayNotify URL:" + req.getRequestURL());
+        
+        req.setCharacterEncoding("utf-8");
+        InputStream reqBody = req.getInputStream();
+        
+        resp.setCharacterEncoding("utf-8");
+        resp.setContentType("text/xml; charset=utf-8");
+        PrintWriter out = resp.getWriter();
+        
+        Notify notify = new Notify(reqBody);
+        if (this.handleWSxPayNotify(notify))
+            out.print("<xml><return_code>SUCCESS</return_code></xml>");
+        // else
+        out.print("<xml><return_code>FAIL</return_code><return_msg>NO_HANDLER_REPORTED</return_msg></xml>");
+    }
+    
+    /**
+     * 支付结果通知处理
+     * 
+     * @param notify
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    private boolean handleWSxPayNotify(Notify notify)
+        throws UnsupportedEncodingException
+    {
+        
+        // 验证签名
+        PropertiesLoader wxProperties = new PropertiesLoader("classpath:/wxpay.properties");
+        
+        // 签名验证失败
+        if (!notify.verify(wxProperties.getProperties()))
+        {
+            logger.error("签名验证失败");
+            return false;
+        }
+        
+        // 验证订单 是否已经支付并处理
+        // 用户订单信息
+        // 商户订单号
+        String outTradeNo = notify.getOutTradeNo();
+        int orderId = Integer.parseInt(outTradeNo);
+        StoreOrder orderInfo = orderService.findStoreOrderById(orderId);
+        // 用户订单无效
+        if (orderInfo == null)
+        {
+            logger.error("用户订单" + orderId + "无效");
+            
+            return false;
+        }
+        
+        if (Constants.ORDER_STATUS_DEFAULT != orderInfo.getOrderStatus())
+        {
+            return true;
+        }
+        
+        // 总金额
+        int totalFee = notify.getTotalFee();
+        
+        // 订单金额
+        int orderFee = orderInfo.getOrderAmount().multiply(new BigDecimal(100)).intValue();
+        
+        // 订单金额和 微信支付通知金额不一致
+        if (totalFee != orderFee)
+        {
+            logger.error("订单金额和 微信支付通知金额不一致");
+            
+            return false;
+        }
+        
+        String openId = notify.getOpenid();
+        WechatMember member = memberService.getWechatMember(openId);
+        // 微信会员不存在
+        if (member == null)
+        {
+            logger.error("微信会员不存在(openid:" + openId + ")");
+            
+            return false;
+        }
+        
+        // 生成支付单信息
+        Date now = new Date();
+        StorePay entity = new StorePay();
+        entity.setPayCode(Constants.PAY_CODE_WEIXIN);
+        entity.setPayTime(now);
+        entity.setPayMemberId(orderInfo.getMemberId());
+        entity.setPayMemberName(member.getMemberTruename());
+        entity.setPayMemberPhone(member.getMemberPhone());
+        entity.setPayMoney(orderInfo.getOrderAmount());
+        entity.setPayState(Constants.PAY_STATE_PAYED);
+        entity.setCommisRates(orderInfo.getCommisRates());
+        entity.setStoreId(orderInfo.getStoreId());
+        entity.setCompanyName(orderInfo.getCompanyName());
+        entity.setStoreAmount(orderInfo.getStoreAmount());
+        entity.setCommisAmount(orderInfo.getCommisAmount());
+        
+        // 订单信息
+        // 微信支付订单号
+        entity.setOpenId(openId);
+        entity.setWechatPaySn(notify.getTransactionId());
+        entity.setOrderId(orderId);
+        entity.setOrderType(orderInfo.getOrderType());
+        
+        entity.setInsDate(now);
+        entity.setUpdDate(now);
+        
+        entity = storePayDao.save(entity);
+        
+        // 订单商品库存和销量更新
+        List<OrderGood> orderGoodList = orderGoodDao.findByOrderId(orderId);
+        
+        List<StoreGood> storeGoodList = new ArrayList<StoreGood>();
+        for (OrderGood orderGood : orderGoodList)
+        {
+            
+            // 获取商品信息
+            StoreGood goodInfo = goodsDao.findOne(orderGood.getGoodsId());
+            
+            if (goodInfo != null)
+            {
+                
+                // 上架数量
+                if (goodInfo.getStockNumber() > 0)
+                {
+                    goodInfo.setStockNumber(goodInfo.getStockNumber() - orderGood.getGoodsNum());
+                }
+                // 销量
+                goodInfo.setSellNumber(goodInfo.getSellNumber() + orderGood.getGoodsNum());
+            }
+            storeGoodList.add(goodInfo);
+        }
+        // 批量更新商品信息
+        goodsDao.save(storeGoodList);
+        
+        // 订单状态
+        orderInfo.setOrderStatus(Constants.ORDER_STATUS_PAYED);
+        orderInfo.setPayId(entity.getPayId());
+        orderInfo.setPayCode(Constants.PAY_CODE_WEIXIN);
+        orderInfo.setPayTime(now);
+        
+        orderDao.save(orderInfo);
+        
+        // 更新店铺资金收入
+        int storeId = orderInfo.getStoreId();
+        FinAcc finAcc = finAccDao.findByAccNo(storeId);
+        if (finAcc != null)
+        {
+            finAcc.setAccIncome(finAcc.getAccIncome().add(orderInfo.getStoreAmount()));
+            finAcc.setAccBal(finAcc.getAccBal().add(orderInfo.getStoreAmount()));
+            
+            finAccDao.save(finAcc);
+        }
+        else
+        {
+            FinAcc newFin = new FinAcc();
+            newFin.setAccNo(storeId);
+            newFin.setAccIncome(orderInfo.getStoreAmount());
+            newFin.setAccBal(orderInfo.getStoreAmount());
+            newFin.setAccType(Constants.ACC_TYPE_STORE);
+            
+            finAccDao.save(newFin);
+        }
+        
+        // 更新中物华商资金收入 默认666
+        FinAcc zwhsFin = finAccDao.findOne(666);
+        if (zwhsFin != null)
+        {
+            zwhsFin.setAccIncome(zwhsFin.getAccIncome().add(orderInfo.getCommisAmount()));
+            zwhsFin.setAccBal(zwhsFin.getAccBal().add(orderInfo.getCommisAmount()));
+            
+            finAccDao.save(zwhsFin);
+        }
+        else
+        {
+            FinAcc zwhsNewFin = new FinAcc();
+            zwhsNewFin.setAccNo(666);
+            zwhsNewFin.setAccIncome(orderInfo.getCommisAmount());
+            zwhsNewFin.setAccBal(orderInfo.getCommisAmount());
+            zwhsNewFin.setAccType(Constants.ACC_TYPE_ZWHS);
+            
+            finAccDao.save(zwhsNewFin);
+        }
+        
+        return true;
+    }
+}

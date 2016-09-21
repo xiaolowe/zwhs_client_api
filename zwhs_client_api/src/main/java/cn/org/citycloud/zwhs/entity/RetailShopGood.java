@@ -1,0 +1,197 @@
+package cn.org.citycloud.zwhs.entity;
+
+import java.io.Serializable;
+import javax.persistence.*;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import java.math.BigDecimal;
+import java.util.Date;
+
+
+/**
+ * The persistent class for the retail_shop_goods database table.
+ * 
+ */
+@Entity
+@Table(name="retail_shop_goods")
+@NamedQuery(name="RetailShopGood.findAll", query="SELECT r FROM RetailShopGood r")
+@JsonIgnoreProperties(value = { "hibernateLazyInitializer", "handler" })
+public class RetailShopGood implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	@Id
+	@Column(name="retail_shop_goods_id")
+	private int retailShopGoodsId;
+	
+	@Column(name="goods_id")
+	private int goodsId;
+
+	@Column(name="already_sale")
+	private int alreadySale;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="create_time")
+	private Date createTime;
+
+	@Column(name="goods_name")
+	private String goodsName;
+
+	@Column(name="init_price")
+	private BigDecimal initPrice;
+
+	@Column(name="member_id")
+	private int memberId;
+
+	@Column(name="retail_member_name")
+	private String retailMemberName;
+
+	@JsonIgnore
+	@Column(name="sale_price")
+	private BigDecimal salePrice;
+
+	@Column(name="shop_goods_price")
+	private BigDecimal shopGoodsPrice;
+
+	private int status;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="update_time")
+	private Date updateTime;
+	
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="online_time")
+	private Date onlineTime;
+	
+	@Column(name="goods_image")
+	private String goodsImage;
+	
+	@Column(name="goods_image_small")
+	private String goodsImageSmall;
+
+	public RetailShopGood() {
+	}
+
+	public int getGoodsId() {
+		return this.goodsId;
+	}
+
+	public void setGoodsId(int goodsId) {
+		this.goodsId = goodsId;
+	}
+
+	public int getAlreadySale() {
+		return this.alreadySale;
+	}
+
+	public void setAlreadySale(int alreadySale) {
+		this.alreadySale = alreadySale;
+	}
+
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	public String getGoodsName() {
+		return this.goodsName;
+	}
+
+	public void setGoodsName(String goodsName) {
+		this.goodsName = goodsName;
+	}
+
+	public BigDecimal getInitPrice() {
+		return this.initPrice;
+	}
+
+	public void setInitPrice(BigDecimal initPrice) {
+		this.initPrice = initPrice;
+	}
+
+	public int getMemberId() {
+		return this.memberId;
+	}
+
+	public void setMemberId(int memberId) {
+		this.memberId = memberId;
+	}
+
+	public String getRetailMemberName() {
+		return this.retailMemberName;
+	}
+
+	public void setRetailMemberName(String retailMemberName) {
+		this.retailMemberName = retailMemberName;
+	}
+
+	public BigDecimal getSalePrice() {
+		return this.salePrice;
+	}
+
+	public void setSalePrice(BigDecimal salePrice) {
+		this.salePrice = salePrice;
+	}
+
+	public BigDecimal getShopGoodsPrice() {
+		return this.shopGoodsPrice;
+	}
+
+	public void setShopGoodsPrice(BigDecimal shopGoodsPrice) {
+		this.shopGoodsPrice = shopGoodsPrice;
+	}
+
+	public int getStatus() {
+		return this.status;
+	}
+
+	public void setStatus(int status) {
+		this.status = status;
+	}
+
+	public Date getUpdateTime() {
+		return this.updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	public Date getOnlineTime() {
+		return onlineTime;
+	}
+
+	public void setOnlineTime(Date onlineTime) {
+		this.onlineTime = onlineTime;
+	}
+
+	public String getGoodsImage() {
+		return goodsImage;
+	}
+
+	public void setGoodsImage(String goodsImage) {
+		this.goodsImage = goodsImage;
+	}
+
+	public String getGoodsImageSmall() {
+		return goodsImageSmall;
+	}
+
+	public void setGoodsImageSmall(String goodsImageSmall) {
+		this.goodsImageSmall = goodsImageSmall;
+	}
+
+	public int getRetailShopGoodsId() {
+		return retailShopGoodsId;
+	}
+
+	public void setRetailShopGoodsId(int retailShopGoodsId) {
+		this.retailShopGoodsId = retailShopGoodsId;
+	}
+
+	
+}

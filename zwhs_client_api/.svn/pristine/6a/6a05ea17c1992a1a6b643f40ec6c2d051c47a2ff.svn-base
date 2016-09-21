@@ -1,0 +1,78 @@
+package cn.org.citycloud.zwhs.bean;
+
+import org.hibernate.validator.constraints.NotBlank;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+
+@ApiModel(value="分销店铺Model", description="分销店铺Model")
+public class RetailShopInfo {
+
+	@NotBlank(message = "店铺名称不能为空")
+	@ApiModelProperty(value="店铺名称", required=true)
+	private String retailShop;
+
+	@NotBlank(message = "店铺LOGO不能为空")
+	@ApiModelProperty(value="店铺LOGO", required=true)
+	private String logoImage;
+
+	@NotBlank(message = "Banner图不能为空")
+	@ApiModelProperty(value="Banner图名称", required=true)
+	private String bannerImage;
+
+//	private String template;
+
+	// 全部商品
+	private long allGoods = 0L;
+	// 上新商品
+	private long newArrive = 0L;
+
+	public String getRetailShop() {
+		return retailShop;
+	}
+
+	public void setRetailShop(String retailShop) {
+		this.retailShop = retailShop;
+	}
+
+	public String getLogoImage() {
+		return logoImage;
+	}
+
+	public void setLogoImage(String logoImage) {
+		this.logoImage = logoImage;
+	}
+
+	public String getBannerImage() {
+		return bannerImage;
+	}
+
+	public void setBannerImage(String bannerImage) {
+		this.bannerImage = bannerImage;
+	}
+
+//	public String getTemplate() {
+//		return template;
+//	}
+//
+//	public void setTemplate(String template) {
+//		this.template = template;
+//	}
+
+	public long getAllGoods() {
+		return allGoods;
+	}
+
+	public void setAllGoods(long allGoods) {
+		this.allGoods = allGoods;
+	}
+
+	public long getNewArrive() {
+		return newArrive;
+	}
+
+	public void setNewArrive(long newArrive) {
+		this.newArrive = newArrive;
+	}
+
+}

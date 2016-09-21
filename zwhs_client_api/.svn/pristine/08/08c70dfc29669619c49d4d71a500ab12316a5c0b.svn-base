@@ -1,0 +1,41 @@
+package cn.org.citycloud.zwhs.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+
+import cn.org.citycloud.zwhs.entity.StoreGood;
+
+public interface StoreGoodsDao extends JpaRepository<StoreGood, Integer>, JpaSpecificationExecutor<StoreGood> {
+
+	@Query("SELECT s FROM StoreGood s WHERE s.storeId = ?1 AND s.goodsState = '1' AND s.offlineTime > NOW() ORDER BY s.isRecommend DESC")
+	public List<StoreGood> findStoreGoodByStoreId(int store_id);
+	
+	@Query(value="SELECT count(1) FROM store_goods WHERE store_id = ?1 "
+			+ " AND goods_state = '1' AND offline_time > NOW()"
+			, nativeQuery = true)
+	public long countAllGoodsByStoreId(int store_id);
+	
+	@Query(value="SELECT count(1) FROM store_goods WHERE store_id = ?1 "
+			+ " AND goods_state = '1' AND offline_time > NOW()"
+			+ " AND datediff(now(), upd_date) <= 7"
+			, nativeQuery = true)
+	public long countNewArrivalByStoreId(int store_id);
+	
+	@Query(value="SELECT * FROM store_goods WHERE store_id = ?4"
+			+ " AND goods_state = '1' AND offline_time > NOW() "
+			+ " Or brand_name like %?1% Or goods_name like %?1%"
+			+ " Or gc_name like %?1% Or gc_name like %?1% "
+			+ " Or gc_lit_name like %?1% Or goods_spec like %?1% "
+			+ " Or goods_attr like %?1% Or goods_spec like %?1% ORDER BY is_recommend DESC"
+			+ " Limit ?3 Offset ?2 ", nativeQuery = true)
+	public List<StoreGood> findStoreGoodBykeyword(String keyword, int offset, int limit, int store_id);
+	
+	@Query(value="SELECT * FROM store_goods WHERE store_id = ?3"
+			+ " AND goods_state = '1' AND offline_time > NOW() AND stock_number > 0"
+			+ " ORDER BY is_recommend DESC Limit ?2 Offset ?1 ", nativeQuery = true)
+	public List<StoreGood> findStoreGoodForPage(int offset, int limit, int store_id);
+	
+}

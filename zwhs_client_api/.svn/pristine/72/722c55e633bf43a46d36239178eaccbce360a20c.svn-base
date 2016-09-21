@@ -1,0 +1,236 @@
+package cn.org.citycloud.zwhs.controller;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+import cn.org.citycloud.zwhs.bean.BindCardBean;
+import cn.org.citycloud.zwhs.bean.RetailMemberBean;
+import cn.org.citycloud.zwhs.constants.ErrorCodes;
+import cn.org.citycloud.zwhs.core.BaseController;
+import cn.org.citycloud.zwhs.entity.RetailMember;
+import cn.org.citycloud.zwhs.entity.Store;
+import cn.org.citycloud.zwhs.entity.WechatMember;
+import cn.org.citycloud.zwhs.exception.BusinessErrorException;
+import cn.org.citycloud.zwhs.repository.RegionInfoDao;
+import cn.org.citycloud.zwhs.repository.RetailMemberDao;
+import cn.org.citycloud.zwhs.repository.StoreDao;
+import cn.org.citycloud.zwhs.repository.WechatMemberDao;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+
+@RestController
+@Api(tags="分销会员认证", value = "/authMember",  description = "分销信息认证", consumes="application/json")
+public class RetailMemberController extends BaseController{
+	
+	@Autowired
+	private RetailMemberDao retailMemberDao;
+	
+	@Autowired
+	private WechatMemberDao wechatMemberDao;
+
+	@Autowired
+	private StoreDao storeDao;
+	
+	@Autowired
+	private RegionInfoDao regionInfoDao;
+	
+	
+	/**
+	 * 查看分销用户信息 
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/retailMember", method = RequestMethod.GET)
+	@ApiOperation(value = "分销用户信息", notes = "分销用户信息")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public Object getInfo() throws Exception {
+		
+		int memberId = getMemberId();
+		
+		if(memberId == 0){
+			
+			throw new BusinessErrorException(ErrorCodes.NO_DATA, "请登录!");
+		}
+		
+		RetailMember retailMember = retailMemberDao.findOne(memberId);
+		if(retailMember == null){
+			return 0;
+		}
+		
+		return retailMember;
+	}
+	
+
+	/**
+	 * 分销会员认证
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/authMember", method = RequestMethod.PUT)
+	@ApiOperation(value = "分销会员认证", notes = "分销会员认证")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public Object authMember(@ApiParam(value = "分销会员认证信息", required = true) @Valid @RequestBody RetailMemberBean bean) throws BusinessErrorException {
+		
+		int memberId = getMemberId();
+		
+		if(memberId == 0){
+			
+			throw new BusinessErrorException(ErrorCodes.NO_DATA, "请登录!");
+		}
+		
+		RetailMember retailMember = retailMemberDao.findOne(memberId);
+		
+		int storeId = retailMember.getStoreId();
+		
+//		int provinceCode = bean.getProvinceCode();
+//		int cityCode = bean.getCityCode();
+		
+		if(storeId == 0){
+			
+			throw new BusinessErrorException(ErrorCodes.NO_DATA, "请选择需要绑定的店铺!");
+		}
+//		if(provinceCode == 0 && cityCode == 0){
+//			
+//			throw new BusinessErrorException(ErrorCodes.NO_DATA, "请选择所在省市!");
+//		}
+		
+//		RegionInfo prov = regionInfoDao.findByRegionCode(provinceCode);
+//		RegionInfo city = regionInfoDao.findByRegionCode(cityCode);
+		
+//		if(prov == null || city == null){
+//			
+//			throw new BusinessErrorException(ErrorCodes.NO_DATA, "该省市不存在,请重新选择!");
+//		}
+		
+		Store store = storeDao.findOne(storeId);
+		
+//		if(store.getRegionCity() != cityCode){
+//			
+//			throw new BusinessErrorException(ErrorCodes.NO_DATA, "该母婴店所在城市为"+store.getRegionCityName()+", 请选择该城市!");
+//		}
+		
+		Date now = new Date();
+		
+		retailMember.setMemberPhone(bean.getPhone());
+		retailMember.setMemberTruename(bean.getMemberTrueName());
+		retailMember.setIdentityNo(bean.getIdentityNo());
+		retailMember.setIdentityImage(bean.getIdentityImage());
+//		retailMember.setRegionProv(provinceCode);
+//		retailMember.setRegionProvName(prov.getRegionName());
+//		retailMember.setRegionCity(cityCode);
+//		retailMember.setRegionCityName(prov.getRegionName());
+		
+		
+		WechatMember wechatMember = wechatMemberDao.findOne(memberId);
+		retailMember.setMemberId(memberId);
+		retailMember.setMemberAvatar(wechatMember.getMemberAvatar());
+		retailMember.setWechatAliasname(wechatMember.getWechatAliasname());
+		retailMember.setOpenId(wechatMember.getOpenId());
+		retailMember.setMemberTime(now);
+		
+		
+		
+		return retailMemberDao.save(retailMember);
+		
+		
+	}
+	
+	/**
+	 * 绑定银行卡
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/bindcard", method = RequestMethod.PUT)
+	@ApiOperation(value = "绑定银行卡", notes = "绑定银行卡")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public Object bindCard( @ApiParam(value = "绑定银行卡信息", required = true) @Valid @RequestBody BindCardBean bean) throws BusinessErrorException {
+		
+		int memberId = getMemberId();
+		
+		if(memberId == 0){
+			
+			throw new BusinessErrorException(ErrorCodes.NO_DATA, "请登录!");
+		}
+		
+		RetailMember retailMember = retailMemberDao.findOne(memberId);
+		
+		Date now = new Date();
+		
+		retailMember.setCardOwner(bean.getCardOwner());
+		retailMember.setCardNo(bean.getCardNo());
+		retailMember.setBankName(bean.getBankName());
+		retailMember.setAccountBank(bean.getAccountBank());
+		retailMember.setUpdDate(now);
+		
+		return retailMemberDao.save(retailMember);
+		
+		
+	}
+	
+	/**
+	 * 获取分销商账号收益信息
+	 * 
+	 */
+	@RequestMapping(value = "/profit",method = RequestMethod.GET)
+	@ApiOperation(value = "获取分销商收益信息", notes = "获取分销商收益信息", response = Map.class)
+	@ApiImplicitParams(value = {
+			@ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header") })
+	public Object getDistributorFinAccInfo() {
+		
+		// 我的收益
+		BigDecimal myProfit = BigDecimal.ZERO;
+		
+		// 今日收益
+		BigDecimal todayProfit =  BigDecimal.ZERO;
+		
+		
+		Map<String, String> rstMap = new HashMap<String, String>();
+		rstMap.put("myProfit", myProfit.toString());
+		rstMap.put("todayProfit", todayProfit.toString());
+
+		return rstMap;
+	}
+	
+	/**
+	 * 申请提款
+	 * 
+	 */
+	@RequestMapping(value = "/submitWithdraw", method = RequestMethod.POST)
+	@ApiOperation(value = "分销商申请提款", notes = "分销商申请提款", response = void.class)
+	@ApiImplicitParams(value = {
+			@ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header") })
+	public void submitDistributorCashInfo() {
+
+
+	}
+	
+	/**
+	 * 历史提款信息
+	 * 
+	 */
+//	@RequestMapping(value = "/withdrawHistory", method = RequestMethod.GET)
+//	@ApiOperation(value = "获取分销商信息", notes = "获取分销商信息", response = SalesMember.class)
+//	@ApiImplicitParams(value = {
+//			@ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header") })
+//	public Object getDistributorCashHistory() {
+//
+//		return salesMemberDao.findOne(getMemberId());
+//
+//	}
+//	
+	
+}

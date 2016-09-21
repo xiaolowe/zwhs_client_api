@@ -1,0 +1,472 @@
+package cn.org.citycloud.zwhs.entity;
+
+import java.io.Serializable;
+import javax.persistence.*;
+import java.math.BigDecimal;
+import java.util.Date;
+
+
+/**
+ * The persistent class for the store_order database table.
+ * 
+ */
+@Entity
+@Table(name="store_order")
+@NamedQuery(name="StoreOrder.findAll", query="SELECT s FROM StoreOrder s")
+public class StoreOrder implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	@Id
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	@Column(name="order_id", unique=true, nullable=false)
+	private int orderId;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="add_time", nullable=false)
+	private Date addTime;
+
+	@Column(name="commis_amount", precision=10, scale=2)
+	private BigDecimal commisAmount;
+
+	@Column(name="commis_rates", precision=10, scale=2)
+	private BigDecimal commisRates;
+
+	@Column(name="company_name", length=50)
+	private String companyName;
+
+	@Column(name="contacts_address", length=50)
+	private String contactsAddress;
+
+	@Column(name="contacts_name", length=30)
+	private String contactsName;
+
+	@Column(name="contacts_phone", length=11)
+	private String contactsPhone;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="finish_time")
+	private Date finishTime;
+
+	@Column(name="geval_type")
+	private int gevalType;
+
+	@Column(name="goods_amount", nullable=false, precision=10, scale=2)
+	private BigDecimal goodsAmount;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="ins_date")
+	private Date insDate;
+
+	@Column(name="member_addr_id", nullable=false)
+	private int memberAddrId;
+
+	@Column(name="member_id")
+	private int memberId;
+
+	@Column(name="member_truename", length=20)
+	private String memberTruename;
+
+	@Column(name="menber_phone", length=20)
+	private String menberPhone;
+
+	@Column(name="order_amount", nullable=false, precision=10, scale=2)
+	private BigDecimal orderAmount;
+
+	@Column(name="order_status", nullable=false)
+	private int orderStatus;
+
+	@Column(name="order_type")
+	private int orderType;
+
+	@Column(name="pay_code", length=10)
+	private String payCode;
+
+	@Column(name="pay_id")
+	private int payId;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="pay_time")
+	private Date payTime;
+
+	@Column(name="post_code", length=6)
+	private String postCode;
+
+	@Column(name="pre_pay", length=100)
+	private String prePay;
+
+	@Column(name="region_area_name", length=50)
+	private String regionAreaName;
+
+	@Column(name="region_city")
+	private int regionCity;
+
+	@Column(name="region_city_name", length=50)
+	private String regionCityName;
+
+	@Column(name="region_code")
+	private int regionCode;
+
+	@Column(name="region_prov")
+	private int regionProv;
+
+	@Column(name="region_prov_name", length=50)
+	private String regionProvName;
+
+	@Column(length=1000)
+	private String remark;
+
+	@Column(name="store_amount", precision=10, scale=2)
+	private BigDecimal storeAmount;
+
+	@Column(name="store_id", nullable=false)
+	private int storeId;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="upd_date")
+	private Date updDate;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="visit_time")
+	private Date visitTime;
+	
+	@Column(name="is_retail")
+	private int isRetail;
+	
+	@Column(name="retailAmount", precision=10, scale=2)
+	private BigDecimal retailAmount;
+	
+	@Column(name="retail_member_id")
+	private int retailMemberId;
+	
+	@Column(name="retail_member_name", length=50)
+	private String retailMemberName;
+	
+	@Column(name="retail_shop_name", length=50)
+	private String retailShopName;
+
+	public StoreOrder() {
+	}
+
+	public int getOrderId() {
+		return this.orderId;
+	}
+
+	public void setOrderId(int orderId) {
+		this.orderId = orderId;
+	}
+
+	public Date getAddTime() {
+		return this.addTime;
+	}
+
+	public void setAddTime(Date addTime) {
+		this.addTime = addTime;
+	}
+
+	public BigDecimal getCommisAmount() {
+		return this.commisAmount;
+	}
+
+	public void setCommisAmount(BigDecimal commisAmount) {
+		this.commisAmount = commisAmount;
+	}
+
+	public BigDecimal getCommisRates() {
+		return this.commisRates;
+	}
+
+	public void setCommisRates(BigDecimal commisRates) {
+		this.commisRates = commisRates;
+	}
+
+	public String getCompanyName() {
+		return this.companyName;
+	}
+
+	public void setCompanyName(String companyName) {
+		this.companyName = companyName;
+	}
+
+	public String getContactsAddress() {
+		return this.contactsAddress;
+	}
+
+	public void setContactsAddress(String contactsAddress) {
+		this.contactsAddress = contactsAddress;
+	}
+
+	public String getContactsName() {
+		return this.contactsName;
+	}
+
+	public void setContactsName(String contactsName) {
+		this.contactsName = contactsName;
+	}
+
+	public String getContactsPhone() {
+		return this.contactsPhone;
+	}
+
+	public void setContactsPhone(String contactsPhone) {
+		this.contactsPhone = contactsPhone;
+	}
+
+	public Date getFinishTime() {
+		return this.finishTime;
+	}
+
+	public void setFinishTime(Date finishTime) {
+		this.finishTime = finishTime;
+	}
+
+	public int getGevalType() {
+		return this.gevalType;
+	}
+
+	public void setGevalType(int gevalType) {
+		this.gevalType = gevalType;
+	}
+
+	public BigDecimal getGoodsAmount() {
+		return this.goodsAmount;
+	}
+
+	public void setGoodsAmount(BigDecimal goodsAmount) {
+		this.goodsAmount = goodsAmount;
+	}
+
+	public Date getInsDate() {
+		return this.insDate;
+	}
+
+	public void setInsDate(Date insDate) {
+		this.insDate = insDate;
+	}
+
+	public int getMemberAddrId() {
+		return this.memberAddrId;
+	}
+
+	public void setMemberAddrId(int memberAddrId) {
+		this.memberAddrId = memberAddrId;
+	}
+
+	public int getMemberId() {
+		return this.memberId;
+	}
+
+	public void setMemberId(int memberId) {
+		this.memberId = memberId;
+	}
+
+	public String getMemberTruename() {
+		return this.memberTruename;
+	}
+
+	public void setMemberTruename(String memberTruename) {
+		this.memberTruename = memberTruename;
+	}
+
+	public String getMenberPhone() {
+		return this.menberPhone;
+	}
+
+	public void setMenberPhone(String menberPhone) {
+		this.menberPhone = menberPhone;
+	}
+
+	public BigDecimal getOrderAmount() {
+		return this.orderAmount;
+	}
+
+	public void setOrderAmount(BigDecimal orderAmount) {
+		this.orderAmount = orderAmount;
+	}
+
+	public int getOrderStatus() {
+		return this.orderStatus;
+	}
+
+	public void setOrderStatus(int orderStatus) {
+		this.orderStatus = orderStatus;
+	}
+
+	public int getOrderType() {
+		return this.orderType;
+	}
+
+	public void setOrderType(int orderType) {
+		this.orderType = orderType;
+	}
+
+	public String getPayCode() {
+		return this.payCode;
+	}
+
+	public void setPayCode(String payCode) {
+		this.payCode = payCode;
+	}
+
+	public int getPayId() {
+		return this.payId;
+	}
+
+	public void setPayId(int payId) {
+		this.payId = payId;
+	}
+
+	public Date getPayTime() {
+		return this.payTime;
+	}
+
+	public void setPayTime(Date payTime) {
+		this.payTime = payTime;
+	}
+
+	public String getPostCode() {
+		return this.postCode;
+	}
+
+	public void setPostCode(String postCode) {
+		this.postCode = postCode;
+	}
+
+	public String getPrePay() {
+		return this.prePay;
+	}
+
+	public void setPrePay(String prePay) {
+		this.prePay = prePay;
+	}
+
+	public String getRegionAreaName() {
+		return this.regionAreaName;
+	}
+
+	public void setRegionAreaName(String regionAreaName) {
+		this.regionAreaName = regionAreaName;
+	}
+
+	public int getRegionCity() {
+		return this.regionCity;
+	}
+
+	public void setRegionCity(int regionCity) {
+		this.regionCity = regionCity;
+	}
+
+	public String getRegionCityName() {
+		return this.regionCityName;
+	}
+
+	public void setRegionCityName(String regionCityName) {
+		this.regionCityName = regionCityName;
+	}
+
+	public int getRegionCode() {
+		return this.regionCode;
+	}
+
+	public void setRegionCode(int regionCode) {
+		this.regionCode = regionCode;
+	}
+
+	public int getRegionProv() {
+		return this.regionProv;
+	}
+
+	public void setRegionProv(int regionProv) {
+		this.regionProv = regionProv;
+	}
+
+	public String getRegionProvName() {
+		return this.regionProvName;
+	}
+
+	public void setRegionProvName(String regionProvName) {
+		this.regionProvName = regionProvName;
+	}
+
+	public String getRemark() {
+		return this.remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public BigDecimal getStoreAmount() {
+		return this.storeAmount;
+	}
+
+	public void setStoreAmount(BigDecimal storeAmount) {
+		this.storeAmount = storeAmount;
+	}
+
+	public int getStoreId() {
+		return this.storeId;
+	}
+
+	public void setStoreId(int storeId) {
+		this.storeId = storeId;
+	}
+
+	public Date getUpdDate() {
+		return this.updDate;
+	}
+
+	public void setUpdDate(Date updDate) {
+		this.updDate = updDate;
+	}
+
+	public Date getVisitTime() {
+		return this.visitTime;
+	}
+
+	public void setVisitTime(Date visitTime) {
+		this.visitTime = visitTime;
+	}
+
+	public int getIsRetail() {
+		return isRetail;
+	}
+
+	public void setIsRetail(int isRetail) {
+		this.isRetail = isRetail;
+	}
+
+	public BigDecimal getRetailAmount() {
+		return retailAmount;
+	}
+
+	public void setRetailAmount(BigDecimal retailAmount) {
+		this.retailAmount = retailAmount;
+	}
+
+	public int getRetailMemberId() {
+		return retailMemberId;
+	}
+
+	public void setRetailMemberId(int retailMemberId) {
+		this.retailMemberId = retailMemberId;
+	}
+
+	public String getRetailMemberName() {
+		return retailMemberName;
+	}
+
+	public void setRetailMemberName(String retailMemberName) {
+		this.retailMemberName = retailMemberName;
+	}
+
+	public String getRetailShopName() {
+		return retailShopName;
+	}
+
+	public void setRetailShopName(String retailShopName) {
+		this.retailShopName = retailShopName;
+	}
+	
+	
+
+}

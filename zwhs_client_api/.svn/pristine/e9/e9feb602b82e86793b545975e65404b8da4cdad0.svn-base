@@ -1,0 +1,1023 @@
+package cn.org.citycloud.zwhs.service;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import cn.org.citycloud.zwhs.bean.OrderCancel;
+import cn.org.citycloud.zwhs.bean.OrderGoods;
+import cn.org.citycloud.zwhs.bean.OrderList;
+import cn.org.citycloud.zwhs.bean.PreOrder;
+import cn.org.citycloud.zwhs.constants.Constants;
+import cn.org.citycloud.zwhs.constants.ErrorCodes;
+import cn.org.citycloud.zwhs.entity.OrderGood;
+import cn.org.citycloud.zwhs.entity.RegionInfo;
+import cn.org.citycloud.zwhs.entity.RetailMember;
+import cn.org.citycloud.zwhs.entity.RetailShop;
+import cn.org.citycloud.zwhs.entity.Store;
+import cn.org.citycloud.zwhs.entity.StoreCoupon;
+import cn.org.citycloud.zwhs.entity.StoreGood;
+import cn.org.citycloud.zwhs.entity.StoreOrder;
+import cn.org.citycloud.zwhs.entity.StoreOrderCoupon;
+import cn.org.citycloud.zwhs.entity.WechatMember;
+import cn.org.citycloud.zwhs.entity.WechatMemberAddr;
+import cn.org.citycloud.zwhs.entity.WechatMemberCoupon;
+import cn.org.citycloud.zwhs.exception.BusinessErrorException;
+import cn.org.citycloud.zwhs.repository.OrderGoodDao;
+import cn.org.citycloud.zwhs.repository.RegionInfoDao;
+import cn.org.citycloud.zwhs.repository.RetailMemberDao;
+import cn.org.citycloud.zwhs.repository.RetailShopDao;
+import cn.org.citycloud.zwhs.repository.StoreCouponDao;
+import cn.org.citycloud.zwhs.repository.StoreDao;
+import cn.org.citycloud.zwhs.repository.StoreGoodsDao;
+import cn.org.citycloud.zwhs.repository.StoreOrderCouponDao;
+import cn.org.citycloud.zwhs.repository.StoreOrderDao;
+import cn.org.citycloud.zwhs.repository.WechatMemberAddrDao;
+import cn.org.citycloud.zwhs.repository.WechatMemberCouponDao;
+import cn.org.citycloud.zwhs.repository.WechatMemberDao;
+
+//Spring Bean的标识.
+@Component
+// 类中所有public函数都纳入事务管理的标识.
+@Transactional
+public class OrderService
+{
+	
+	private static Logger logger = Logger.getLogger(OrderService.class);
+    
+    @Autowired
+    private WechatMemberDao wcmemberDao;
+    
+    @Autowired
+    private StoreDao storeDao;
+    
+    @Autowired
+    private StoreOrderDao orderDao;
+    
+    @Autowired
+    private StoreGoodsDao goodsDao;
+    
+    @Autowired
+    private OrderGoodDao orderGoodDao;
+    
+    @Autowired
+    private WechatMemberAddrDao memberAddrDao;
+    
+    @Autowired
+    private RegionInfoDao reginDao;
+    
+    @Autowired
+    private StoreCouponDao storeCouponDao;
+    
+    @Autowired
+    private WechatMemberCouponDao memberCouponDao;
+    
+    @Autowired
+    private StoreOrderCouponDao storeOrderCouponDao;
+    
+    @Autowired
+    private RetailMemberDao retailMemberDao;
+    
+    @Autowired
+    private RetailShopDao retailShopDao;
+    
+    /**
+     * 根据订单号 获取订单信息
+     * 
+     * @param orderId
+     * @return
+     */
+    public StoreOrder findStoreOrderById(int orderId)
+    {
+        
+        return orderDao.findOne(orderId);
+    }
+    
+    /**
+     * 用户订单信息
+     * 
+     * @param orderId
+     * @return
+     */
+    public StoreOrder findStoreOrderById(int storeId, int memberId, int orderId)
+    {
+        
+        return orderDao.findOne(orderId);
+    }
+    
+    /**
+     * 根据订单号 获取订单状态 获取订单信息
+     * 
+     * @param orderId
+     * @return
+     */
+    public List<OrderList> findStoreOrderList(int storeId, int memberId, int status)
+    {
+        List<StoreOrder> orderList = null;
+        if (99 == status)
+        {
+            orderList = orderDao.findByStoreIdAndMemberIdOrderByInsDateDesc(storeId, memberId);
+        }
+        else
+        {
+            orderList = orderDao.findByStoreIdAndMemberIdAndOrderStatusOrderByInsDateDesc(storeId, memberId, status);
+        }
+        
+        if (orderList.size() == 0)
+        {
+            return null;
+        }
+        
+        List<OrderList> retList = new ArrayList<OrderList>();
+        for (StoreOrder storeOrder : orderList)
+        {
+            OrderList order = new OrderList();
+            BeanUtils.copyProperties(storeOrder, order);
+            List<OrderGood> orderGoods = orderGoodDao.findByOrderId(storeOrder.getOrderId());
+            order.setOrderGoods(orderGoods);
+            
+            retList.add(order);
+        }
+        
+        return retList;
+    }
+    
+    /**
+     * 根据订单号 获取订单状态 获取订单信息
+     * 分销订单
+     * @param orderId
+     * @return
+     */
+    public List<OrderList> findStoreOrderRetailList(int storeId, int memberId, int status)
+    {
+        List<StoreOrder> orderList = null;
+        if (99 == status)
+        {
+            orderList = orderDao.findByRetailMemberIdAndMemberIdAndIsRetailOrderByInsDateDesc(storeId, memberId, 1); 	// 1 表示分销订单
+        }
+        else
+        {
+            orderList = orderDao.findByRetailMemberIdAndMemberIdAndOrderStatusAndIsRetailOrderByInsDateDesc(storeId, memberId, status, 1);	// 1  表示分销订单
+        }
+        
+        if (orderList.size() == 0)
+        {
+            return null;
+        }
+        
+        List<OrderList> retList = new ArrayList<OrderList>();
+        for (StoreOrder storeOrder : orderList)
+        {
+            OrderList order = new OrderList();
+            BeanUtils.copyProperties(storeOrder, order);
+            List<OrderGood> orderGoods = orderGoodDao.findByOrderId(storeOrder.getOrderId());
+            order.setOrderGoods(orderGoods);
+            
+            retList.add(order);
+        }
+        
+        return retList;
+    }
+    
+    
+    /**
+     * 订单详情
+     * 
+     * @param storeId
+     * @param memberId
+     * @param id
+     * @return
+     */
+    public OrderList findStoreOrder(int id, int storeId, int memberId)
+    {
+        
+        StoreOrder order = orderDao.findByOrderIdAndStoreIdAndMemberId(id, storeId, memberId);
+        
+        if (order == null)
+            return null;
+        
+        OrderList orderList = new OrderList();
+        BeanUtils.copyProperties(order, orderList);
+        
+        List<OrderGood> orderGoods = orderGoodDao.findByOrderId(order.getOrderId());
+        orderList.setOrderGoods(orderGoods);
+        
+        return orderList;
+    }
+    
+    /**
+     * 取消订单
+     * 
+     * @throws BusinessErrorException
+     */
+    public void cancelOrder(int orderId, int storeId, int memberId, OrderCancel cancel)
+        throws BusinessErrorException
+    {
+        
+        StoreOrder order = orderDao.findByOrderIdAndStoreIdAndMemberId(orderId, storeId, memberId);
+        
+        if (order == null)
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "此订单不存在！");
+        
+        // 已经付款的订单无法取消
+        if (Constants.ORDER_STATUS_DEFAULT != order.getOrderStatus())
+        {
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "已经付款的订单无法取消！");
+        }
+        
+        // 取消订单理由
+        if (cancel != null && StringUtils.isNotEmpty(cancel.getCancelReason()))
+        {
+            order.setRemark(cancel.getCancelReason());
+        }
+        order.setOrderStatus(Constants.ORDER_STATUS_CANCELD);
+        order.setUpdDate(new Date());
+        
+        orderDao.save(order);
+    }
+    
+    /**
+     * 确认收货
+     * 
+     * @throws BusinessErrorException
+     */
+    public void confirmOrder(int orderId, int storeId, int memberId)
+        throws BusinessErrorException
+    {
+        
+        StoreOrder order = orderDao.findByOrderIdAndStoreIdAndMemberId(orderId, storeId, memberId);
+        
+        if (order == null)
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "此订单不存在！");
+        if (Constants.ORDER_STATUS_PAYED == order.getOrderStatus())
+        {
+            Date now = new Date();
+            order.setOrderStatus(Constants.ORDER_STATUS_RECEIVED);
+            order.setFinishTime(now);
+            order.setUpdDate(now);
+            
+            orderDao.save(order);
+        }
+        else
+        {
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "此订单无法确认收货！");
+        }
+    }
+    
+    /**
+     * 确认收货(分销)
+     * 
+     * @throws BusinessErrorException
+     */
+    public void confirmRetailOrder(int orderId, int retailMemberId, int memberId)
+        throws BusinessErrorException
+    {
+        
+        StoreOrder order = orderDao.findByOrderIdAndRetailMemberIdAndMemberId(orderId, retailMemberId, memberId);
+        
+        if (order == null)
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "此订单不存在！");
+        if (Constants.ORDER_STATUS_YIFAHUO == order.getOrderStatus())
+        {
+            Date now = new Date();
+            order.setOrderStatus(Constants.ORDER_STATUS_RECEIVED);
+            order.setFinishTime(now);
+            order.setUpdDate(now);
+            
+            orderDao.save(order);
+        }
+        else
+        {
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "此订单无法确认收货！");
+        }
+    }
+    
+    /**
+     * 取消订单(分销)
+     * 
+     * @throws BusinessErrorException
+     */
+    public void cancelRetailOrder(int orderId, int retailMemberId, int memberId, OrderCancel cancel)
+        throws BusinessErrorException
+    {
+        
+        StoreOrder order = orderDao.findByOrderIdAndRetailMemberIdAndMemberId(orderId, retailMemberId, memberId);
+        
+        if (order == null)
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "此订单不存在！");
+        
+        // 已经付款的订单无法取消
+        if (Constants.ORDER_STATUS_DEFAULT != order.getOrderStatus())
+        {
+            throw new BusinessErrorException(ErrorCodes.ORDER_ERROR, "已经付款的订单无法取消！");
+        }
+        
+        // 取消订单理由
+        if (cancel != null && StringUtils.isNotEmpty(cancel.getCancelReason()))
+        {
+            order.setRemark(cancel.getCancelReason());
+        }
+        order.setOrderStatus(Constants.ORDER_STATUS_CANCELD);
+        order.setUpdDate(new Date());
+        
+        orderDao.save(order);
+    }
+    
+    /**
+     * 生成预订单及订单商品信息
+     * @throws BusinessErrorException
+     */
+    public StoreOrder generateOrder(PreOrder order, int storeId, int memberId)
+        throws BusinessErrorException
+    {
+        
+        // 店铺信息
+        Store store = storeDao.findOne(storeId);
+        if (store == null || Constants.STORE_STATE_OPEN != store.getStoreState())
+        {
+            throw new BusinessErrorException(ErrorCodes.WRONG_STORE, "此门店不存在！");
+        }
+        // 分销商信息
+        
+        // 会员信息
+        WechatMember member = wcmemberDao.getOne(memberId);
+        if (member == null || Constants.MEMBER_STATE_CLOSED == member.getMemberState())
+        {
+            throw new BusinessErrorException(ErrorCodes.WRONG_MEMBER, "此会员已经被禁用！");
+        }
+        
+        // 生成时间
+        Date now = new Date();
+        
+        StoreOrder preOrder = new StoreOrder();
+        // 订单生成时间
+        preOrder.setAddTime(now);
+        
+        // 收货地址信息
+        preOrder.setRegionCode(order.getRegionCode());
+        // 地址码
+        long countRegin = reginDao.countByRegionCode(order.getRegionCode());
+        
+        // 如果此区县码 不在系统库中，追加此地址码
+        if (countRegin == 0)
+        {
+            
+            RegionInfo region = new RegionInfo();
+            region.setRegionCode(order.getRegionCode());
+            region.setRegionName(order.getRegionAreaName());
+            region.setRegionLevel(3);
+            
+            reginDao.save(region);
+        }
+        
+        String reginCode = String.valueOf(order.getRegionCode());
+        int reginProv = Integer.parseInt(reginCode.substring(0, 2) + "0000");
+        int regionCity = Integer.parseInt(reginCode.substring(0, 4) + "00");
+        // 省
+        preOrder.setRegionProv(reginProv);
+        // 市
+        preOrder.setRegionCity(regionCity);
+        
+        preOrder.setContactsName(order.getContactsName());
+        preOrder.setContactsPhone(order.getContactsPhone());
+        preOrder.setContactsAddress(order.getContactsAddress());
+        preOrder.setPostCode(order.getPostCode());
+        preOrder.setRegionProvName(order.getRegionProvName());
+        preOrder.setRegionCityName(order.getRegionCityName());
+        preOrder.setRegionAreaName(order.getRegionAreaName());
+        
+        WechatMemberAddr memberAddr = memberAddrDao.findByMemberId(memberId);
+        
+        // 插入微信用户收货地址信息
+        if (memberAddr == null)
+        {
+            WechatMemberAddr newAddr = new WechatMemberAddr();
+            newAddr.setMemberId(memberId);
+            newAddr.setRegionCode(order.getRegionCode());
+            newAddr.setContactsName(order.getContactsName());
+            newAddr.setContactsPhone(order.getContactsPhone());
+            newAddr.setContactsAddress(order.getContactsAddress());
+            newAddr.setPostCode(order.getPostCode());
+            newAddr.setRegionProvName(order.getRegionProvName());
+            newAddr.setRegionCityName(order.getRegionCityName());
+            newAddr.setRegionAreaName(order.getRegionAreaName());
+            newAddr.setInsDate(now);
+            newAddr.setUpdDate(now);
+            
+            memberAddrDao.save(newAddr);
+        }
+        else
+        {
+            // 更新微信用户收货地址信息
+            if (!order.getContactsAddress().equals(memberAddr.getContactsAddress()))
+            {
+                memberAddr.setRegionCode(order.getRegionCode());
+                memberAddr.setContactsName(order.getContactsName());
+                memberAddr.setContactsPhone(order.getContactsPhone());
+                memberAddr.setContactsAddress(order.getContactsAddress());
+                memberAddr.setPostCode(order.getPostCode());
+                memberAddr.setRegionProvName(order.getRegionProvName());
+                memberAddr.setRegionCityName(order.getRegionCityName());
+                memberAddr.setRegionAreaName(order.getRegionAreaName());
+                memberAddr.setUpdDate(now);
+                
+                memberAddrDao.save(memberAddr);
+            }
+        }
+        
+        // 门店
+        preOrder.setStoreId(storeId);
+        if (StringUtils.isEmpty(store.getCompanyName()))
+        {
+            preOrder.setCompanyName(store.getStoreAliasName());
+        }
+        else
+        {
+            preOrder.setCompanyName(store.getCompanyName());
+        }
+        
+        // 会员信息
+        preOrder.setMemberId(memberId);
+        if (StringUtils.isNotEmpty(member.getMemberTruename()))
+        {
+            preOrder.setMemberTruename(member.getMemberTruename());
+        }
+        else
+        {
+            preOrder.setMemberTruename(member.getWechatAliasname());
+        }
+        preOrder.setMenberPhone(member.getMemberPhone());
+        
+        // 订单状态
+        preOrder.setOrderStatus(Constants.ORDER_STATUS_DEFAULT);
+        preOrder.setOrderType(Constants.ORDER_TYPE_GOODS);
+        
+        preOrder.setInsDate(now);
+        preOrder.setUpdDate(now);
+        
+        // 订单金额计算
+        // 商品总价格
+        BigDecimal goodsAmount = BigDecimal.ZERO;
+        
+        // 订单总价格
+        BigDecimal orderAmount = BigDecimal.ZERO;
+        
+        // 佣金比例
+        BigDecimal commisRates = BigDecimal.ZERO;
+        if (store.getCommisRates() != null)
+        {
+            commisRates = store.getCommisRates();
+        }
+        
+        // 母婴店营收
+        BigDecimal storeAmount = BigDecimal.ZERO;
+        
+        // 平台分成金额
+        BigDecimal commisAmount = BigDecimal.ZERO;
+        
+        // 保存预订单
+        preOrder.setGoodsAmount(goodsAmount);
+        preOrder.setOrderAmount(orderAmount);
+        StoreOrder newOrder = orderDao.save(preOrder);
+        
+        int orderId = newOrder.getOrderId();
+        
+        StoreOrder generateOrder = orderDao.findOne(orderId);
+        
+        // 订单商品信息
+        List<OrderGoods> orderGoods = order.getOrderGoods();
+        
+        // 插入订单商品信息
+        List<OrderGood> goodsEntitys = new ArrayList<OrderGood>();
+        for (OrderGoods goods : orderGoods)
+        {
+            // 获取商品信息
+            StoreGood goodInfo = goodsDao.findOne(goods.getGoodsId());
+            
+            if (goodInfo == null)
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goods.getGoodsId() + "商品信息不存在。");
+            }
+            // 如果商品已经下架 禁止购买和生成订单
+            if (Constants.GOODS_STATE_NORMAL != goodInfo.getGoodsState())
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goodInfo.getGoodsName() + "已经下架或者禁售。");
+            }
+            
+            // 自动下架时间
+            Date offlineTime = goodInfo.getOfflineTime();
+            
+            if (offlineTime.getTime() < now.getTime())
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goodInfo.getGoodsName() + "已经下架。");
+            }
+            
+            // 商品已经没有库存了
+            if (goodInfo.getStockNumber() <= 0)
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goodInfo.getGoodsName() + "已经售罄。");
+            }
+            
+            // 商品金额
+            BigDecimal goodsTotal = goodInfo.getGoodsSellprice().multiply(new BigDecimal(goods.getGoodsNum()));
+            
+            // 累计商品金额
+            goodsAmount = goodsAmount.add(goodsTotal);
+            
+            // 生成订单商品实体
+            OrderGood entity = new OrderGood();
+            entity.setOrderId(orderId);
+            entity.setGoodsId(goods.getGoodsId());
+            entity.setGoodsName(goodInfo.getGoodsName());
+            entity.setGoodsPrice(goodInfo.getGoodsSellprice());
+            entity.setGoodsNum(goods.getGoodsNum());
+            entity.setGoodsSpec(goodInfo.getGoodsSpec());
+            entity.setGoodsImage(goodInfo.getGoodsImage());
+            entity.setGoodsPayPrice(goodsTotal);
+            entity.setStoreId(storeId);
+            entity.setMemberId(memberId);
+            entity.setCommisRate(commisRates);
+            // 商品类型
+            entity.setGoodsType(Constants.GOODS_TYPE_DEFAULT);
+            entity.setOrderType(Constants.ORDER_TYPE_GOODS);
+            // 品牌
+            entity.setBrandName(goodInfo.getBrandName());
+            
+            goodsEntitys.add(entity);
+            
+            goodInfo.setUpdDate(now);
+            
+            goodsDao.save(goodInfo);
+        }
+        
+        generateOrder.setGoodsAmount(goodsAmount);
+        
+        // 1.22 优惠劵使用
+        int couponId = order.getCouponId();
+        
+        if (couponId != 0)
+        {
+            // 优惠劵信息
+            WechatMemberCoupon memberCoupon = memberCouponDao.findOne(couponId);
+            
+            if (Constants.COUPON_USED == memberCoupon.getIsUsed())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经使用过了。");
+            }
+            
+            // 母婴店优惠劵信息
+            StoreCoupon coupon = storeCouponDao.findOne(memberCoupon.getCouponId());
+            
+            if (coupon == null)
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经失效了。");
+            }
+            
+            if (Constants.COUPON_STATUS_INVALID == coupon.getCouponStatus())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经失效了。");
+            }
+            
+            // 生效时间
+            Date effectiveTime = coupon.getEffectiveTime();
+            
+            if (now.getTime() < effectiveTime.getTime())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵还没有生效。");
+            }
+            
+            // 过期时间
+            Date expirationTime = coupon.getExpirationTime();
+            if (now.getTime() > expirationTime.getTime())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经过期了。");
+            }
+            
+            // 优惠劵面值
+            orderAmount = goodsAmount.subtract(coupon.getCouponMoney());
+            
+            // 插入订单关联优惠劵
+            StoreOrderCoupon orderCoupon = new StoreOrderCoupon();
+            orderCoupon.setCouponId(memberCoupon.getCouponId());
+            orderCoupon.setOrderId(orderId);
+            orderCoupon.setInsDate(now);
+            orderCoupon.setUpdDate(now);
+            
+            storeOrderCouponDao.save(orderCoupon);
+        }
+        else
+        {
+            // 订单金额
+            orderAmount = goodsAmount;
+        }
+        
+        generateOrder.setOrderAmount(orderAmount);
+        
+        // 计算佣金 无佣金
+        if (BigDecimal.ZERO.compareTo(commisRates) == 0)
+        {
+            storeAmount = orderAmount;
+        }
+        else
+        {
+            // 有佣金
+            // 平台分成金额 四舍五入 保留2位小数
+            commisAmount =
+                orderAmount.multiply(commisRates).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_UP);
+            
+            // 母婴店营收
+            storeAmount = orderAmount.subtract(commisAmount);
+        }
+        generateOrder.setCommisRates(commisRates);
+        // 设置平台分成金额
+        generateOrder.setCommisAmount(commisAmount);
+        // 设置母婴店营收
+        generateOrder.setStoreAmount(storeAmount);
+        
+        // 批量插入 订单商品
+        orderGoodDao.save(goodsEntitys);
+        
+        // 更新订单金额
+        return orderDao.save(generateOrder);
+    }
+    
+    
+    /**
+     * 生成预订单及订单商品信息(分销)
+     * @throws BusinessErrorException
+     */
+    public StoreOrder generateOrderRetail(PreOrder order, int storeId, int memberId)
+        throws BusinessErrorException
+    {
+        
+        // 店铺信息
+//        Store store = storeDao.findOne(storeId);
+//        if (store == null || Constants.STORE_STATE_OPEN != store.getStoreState())
+//        {
+//            throw new BusinessErrorException(ErrorCodes.WRONG_STORE, "此门店不存在！");
+//        }
+    	
+        RetailMember retailMember = retailMemberDao.findOne(storeId);
+        
+        
+        if (retailMember == null || retailMember.getMemberState() != 1)
+        {
+            throw new BusinessErrorException(ErrorCodes.WRONG_STORE, "此分销商信息不存在！");
+        }
+        
+        // 会员信息
+        WechatMember member = wcmemberDao.findOne(memberId);
+        
+        if (member == null || Constants.MEMBER_STATE_CLOSED == member.getMemberState())
+        {
+            throw new BusinessErrorException(ErrorCodes.WRONG_MEMBER, "此会员已经被禁用！");
+        }
+        
+        // 生成时间
+        Date now = new Date();
+        
+        StoreOrder preOrder = new StoreOrder();
+        // 订单生成时间
+        preOrder.setAddTime(now);
+        
+        // 收货地址信息
+        preOrder.setRegionCode(order.getRegionCode());
+        // 地址码
+        long countRegin = reginDao.countByRegionCode(order.getRegionCode());
+        
+        // 如果此区县码 不在系统库中，追加此地址码
+        if (countRegin == 0)
+        {
+            
+            RegionInfo region = new RegionInfo();
+            region.setRegionCode(order.getRegionCode());
+            region.setRegionName(order.getRegionAreaName());
+            region.setRegionLevel(3);
+            
+            reginDao.save(region);
+        }
+        
+        String reginCode = String.valueOf(order.getRegionCode());
+        int reginProv = Integer.parseInt(reginCode.substring(0, 2) + "0000");
+        int regionCity = Integer.parseInt(reginCode.substring(0, 4) + "00");
+        // 省
+        preOrder.setRegionProv(reginProv);
+        // 市
+        preOrder.setRegionCity(regionCity);
+        
+        preOrder.setContactsName(order.getContactsName());
+        preOrder.setContactsPhone(order.getContactsPhone());
+        preOrder.setContactsAddress(order.getContactsAddress());
+        preOrder.setPostCode(order.getPostCode());
+        preOrder.setRegionProvName(order.getRegionProvName());
+        preOrder.setRegionCityName(order.getRegionCityName());
+        preOrder.setRegionAreaName(order.getRegionAreaName());
+        
+        WechatMemberAddr memberAddr = memberAddrDao.findByMemberId(memberId);
+        
+        // 插入微信用户收货地址信息
+        if (memberAddr == null)
+        {
+            WechatMemberAddr newAddr = new WechatMemberAddr();
+            newAddr.setMemberId(memberId);
+            newAddr.setRegionCode(order.getRegionCode());
+            newAddr.setContactsName(order.getContactsName());
+            newAddr.setContactsPhone(order.getContactsPhone());
+            newAddr.setContactsAddress(order.getContactsAddress());
+            newAddr.setPostCode(order.getPostCode());
+            newAddr.setRegionProvName(order.getRegionProvName());
+            newAddr.setRegionCityName(order.getRegionCityName());
+            newAddr.setRegionAreaName(order.getRegionAreaName());
+            newAddr.setInsDate(now);
+            newAddr.setUpdDate(now);
+            
+            memberAddrDao.save(newAddr);
+        }
+        else
+        {
+            // 更新微信用户收货地址信息
+            if (!order.getContactsAddress().equals(memberAddr.getContactsAddress()))
+            {
+                memberAddr.setRegionCode(order.getRegionCode());
+                memberAddr.setContactsName(order.getContactsName());
+                memberAddr.setContactsPhone(order.getContactsPhone());
+                memberAddr.setContactsAddress(order.getContactsAddress());
+                memberAddr.setPostCode(order.getPostCode());
+                memberAddr.setRegionProvName(order.getRegionProvName());
+                memberAddr.setRegionCityName(order.getRegionCityName());
+                memberAddr.setRegionAreaName(order.getRegionAreaName());
+                memberAddr.setUpdDate(now);
+                
+                memberAddrDao.save(memberAddr);
+            }
+        }
+        
+        // 销售店铺
+        preOrder.setRetailMemberId(retailMember.getMemberId());
+        preOrder.setRetailMemberName(retailMember.getWechatAliasname());
+
+        RetailShop retailShop = retailShopDao.findByMemberId(storeId);  //店铺id 是分销商id
+        if(retailShop == null){
+        	throw new BusinessErrorException(ErrorCodes.WRONG_MEMBER, "分销店铺不存在！");
+        }
+        
+        Store store = storeDao.findOne(retailMember.getStoreId());
+        
+        // 关联母婴店
+        preOrder.setStoreId(retailMember.getStoreId());
+        preOrder.setCompanyName(store.getCompanyName());
+        preOrder.setRetailShopName(retailShop.getRetailShop());
+//        if (StringUtils.isEmpty(retailMember.getme))
+//        {
+//            preOrder.setCompanyName(store.getStoreAliasName());
+//        }
+//        else
+//        {
+//            preOrder.setCompanyName(store.getCompanyName());
+//        }
+        
+        // 会员信息
+        preOrder.setMemberId(memberId);
+        if (StringUtils.isNotEmpty(member.getMemberTruename()))
+        {
+            preOrder.setMemberTruename(member.getMemberTruename());
+        }
+        else
+        {
+            preOrder.setMemberTruename(member.getWechatAliasname());
+        }
+        preOrder.setMenberPhone(member.getMemberPhone());
+        
+        // 订单状态
+        preOrder.setOrderStatus(Constants.ORDER_STATUS_DEFAULT);
+        preOrder.setOrderType(Constants.ORDER_TYPE_GOODS);
+        
+        preOrder.setInsDate(now);
+        preOrder.setUpdDate(now);
+        
+        // 订单金额计算
+        // 商品总价格
+        BigDecimal goodsAmount = BigDecimal.ZERO;
+        
+        // 商品总成本价
+        BigDecimal initAmount = BigDecimal.ZERO;
+        
+        // 分销总收益
+        BigDecimal retailAmount = BigDecimal.ZERO;
+        
+        // 订单总价格
+        BigDecimal orderAmount = BigDecimal.ZERO;
+        
+        // 佣金比例
+        BigDecimal commisRates = BigDecimal.ZERO;
+//        if (store.getCommisRates() != null)
+//        {
+//            commisRates = store.getCommisRates();
+//        }
+        
+        // 母婴店营收
+        BigDecimal storeAmount = BigDecimal.ZERO;
+        
+        // 平台分成金额
+        BigDecimal commisAmount = BigDecimal.ZERO;
+        
+        // 保存预订单
+        preOrder.setGoodsAmount(goodsAmount);
+        preOrder.setOrderAmount(orderAmount);
+        StoreOrder newOrder = orderDao.save(preOrder);
+        
+        int orderId = newOrder.getOrderId();
+        
+        StoreOrder generateOrder = orderDao.findOne(orderId);
+        
+        // 订单商品信息
+        List<OrderGoods> orderGoods = order.getOrderGoods();
+        
+        // 插入订单商品信息
+        List<OrderGood> goodsEntitys = new ArrayList<OrderGood>();
+        for (OrderGoods goods : orderGoods)
+        {
+            // 获取商品信息
+            StoreGood goodInfo = goodsDao.findOne(goods.getGoodsId());
+            
+            if (goodInfo == null)
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goods.getGoodsId() + "商品信息不存在。");
+            }
+            // 如果商品已经下架 禁止购买和生成订单
+            if (Constants.GOODS_STATE_NORMAL != goodInfo.getGoodsState())
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goodInfo.getGoodsName() + "已经下架或者禁售。");
+            }
+            
+            // 自动下架时间
+            Date offlineTime = goodInfo.getOfflineTime();
+            
+            if (offlineTime.getTime() < now.getTime())
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goodInfo.getGoodsName() + "已经下架。");
+            }
+            
+            // 商品已经没有库存了
+            if (goodInfo.getStockNumber() <= 0)
+            {
+                throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goodInfo.getGoodsName() + "已经售罄。");
+            }
+            
+    		if(goodInfo.getRetailSalePrice().compareTo(new BigDecimal(0)) != 1
+    				&& goodInfo.getRetailInitPrice().compareTo(new BigDecimal(0)) != 1){
+    			
+    			throw new BusinessErrorException(ErrorCodes.WRONG_GOODS, goodInfo.getGoodsName() + "没有想关分销信息。");
+    		}
+    		
+            // 商品金额
+            BigDecimal goodsTotal = goodInfo.getRetailSalePrice().multiply(new BigDecimal(goods.getGoodsNum()));
+            // 商品成本价
+            BigDecimal goodsInitTotal = goodInfo.getRetailInitPrice().multiply(new BigDecimal(goods.getGoodsNum()));
+            // 母婴店收益
+            BigDecimal goodsStoreAmountTotal = BigDecimal.ZERO;
+            if(goodInfo.getStoreAmount() != null){
+            	goodsStoreAmountTotal = goodInfo.getStoreAmount().multiply(new BigDecimal(goods.getGoodsNum()));
+            }
+            
+            // 累计商品金额
+            goodsAmount = goodsAmount.add(goodsTotal);
+            // 累计总成本金额
+            initAmount = initAmount.add(goodsInitTotal);
+            // 累计分销收益
+            retailAmount = goodsAmount.subtract(initAmount);
+            // 母婴店总收益
+            storeAmount = storeAmount.add(goodsStoreAmountTotal);
+            
+            // 生成订单商品实体
+            OrderGood entity = new OrderGood();
+            entity.setOrderId(orderId);
+            entity.setGoodsId(goods.getGoodsId());
+            entity.setGoodsName(goodInfo.getGoodsName());
+            entity.setGoodsPrice(goodInfo.getGoodsSellprice());
+            entity.setGoodsNum(goods.getGoodsNum());
+            entity.setGoodsSpec(goodInfo.getGoodsSpec());
+            entity.setGoodsImage(goodInfo.getGoodsImage());
+            entity.setGoodsPayPrice(goodsTotal);
+            entity.setStoreId(storeId);
+            entity.setMemberId(memberId);
+            entity.setCommisRate(commisRates);
+            // 商品类型
+            entity.setGoodsType(Constants.GOODS_TYPE_DEFAULT);
+            entity.setOrderType(Constants.ORDER_TYPE_GOODS);
+            // 品牌
+            entity.setBrandName(goodInfo.getBrandName());
+            
+            goodsEntitys.add(entity);
+            
+            goodInfo.setUpdDate(now);
+            
+            goodsDao.save(goodInfo);
+        }
+        
+        generateOrder.setGoodsAmount(goodsAmount);
+        
+        // 1.22 优惠劵使用
+        int couponId = order.getCouponId();
+        
+        if (couponId != 0)
+        {
+            // 优惠劵信息
+            WechatMemberCoupon memberCoupon = memberCouponDao.findOne(couponId);
+            
+            if (Constants.COUPON_USED == memberCoupon.getIsUsed())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经使用过了。");
+            }
+            
+            // 母婴店优惠劵信息
+            StoreCoupon coupon = storeCouponDao.findOne(memberCoupon.getCouponId());
+            
+            if (coupon == null)
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经失效了。");
+            }
+            
+            if (Constants.COUPON_STATUS_INVALID == coupon.getCouponStatus())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经失效了。");
+            }
+            
+            // 生效时间
+            Date effectiveTime = coupon.getEffectiveTime();
+            
+            if (now.getTime() < effectiveTime.getTime())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵还没有生效。");
+            }
+            
+            // 过期时间
+            Date expirationTime = coupon.getExpirationTime();
+            if (now.getTime() > expirationTime.getTime())
+            {
+                throw new BusinessErrorException(ErrorCodes.COUPON_ERROR, "此优惠劵已经过期了。");
+            }
+            
+            // 优惠劵面值
+            orderAmount = goodsAmount.subtract(coupon.getCouponMoney());
+            
+            // 插入订单关联优惠劵
+            StoreOrderCoupon orderCoupon = new StoreOrderCoupon();
+            orderCoupon.setCouponId(memberCoupon.getCouponId());
+            orderCoupon.setOrderId(orderId);
+            orderCoupon.setInsDate(now);
+            orderCoupon.setUpdDate(now);
+            
+            storeOrderCouponDao.save(orderCoupon);
+        }
+        else
+        {
+            // 订单金额
+            orderAmount = goodsAmount;
+        }
+        
+        generateOrder.setOrderAmount(orderAmount);
+        
+        // 计算佣金 无佣金
+//        if (BigDecimal.ZERO.compareTo(commisRates) == 0)
+//        {
+//            storeAmount = orderAmount;
+//        }
+//        else
+//        {
+//            // 有佣金
+//            // 平台分成金额 四舍五入 保留2位小数
+//            commisAmount =
+//                orderAmount.multiply(commisRates).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_UP);
+//            
+//            // 母婴店营收
+//            storeAmount = orderAmount.subtract(commisAmount);
+//        }
+        
+        generateOrder.setCommisRates(commisRates);
+        // 设置平台分成金额
+        generateOrder.setCommisAmount(commisAmount);
+        // 设置母婴店营收
+        generateOrder.setStoreAmount(storeAmount);
+        // 设置分销总收益
+        generateOrder.setRetailAmount(retailAmount);
+        generateOrder.setIsRetail(1); 	// 1  分销订单   0 普通订单
+        
+        logger.info("分销总收益=== :"+retailAmount);
+        logger.info("母婴店营收=== :"+storeAmount);
+        
+        // 批量插入 订单商品
+        orderGoodDao.save(goodsEntitys);
+        
+        // 更新订单金额
+        return orderDao.save(generateOrder);
+    }
+}

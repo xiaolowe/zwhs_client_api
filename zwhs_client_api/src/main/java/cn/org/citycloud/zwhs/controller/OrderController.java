@@ -1,0 +1,155 @@
+package cn.org.citycloud.zwhs.controller;
+
+import java.util.List;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import cn.org.citycloud.zwhs.bean.OrderCancel;
+import cn.org.citycloud.zwhs.bean.OrderList;
+import cn.org.citycloud.zwhs.core.BaseController;
+import cn.org.citycloud.zwhs.exception.BusinessErrorException;
+import cn.org.citycloud.zwhs.service.OrderService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+
+/**
+ * 我的订单相关API
+ * 
+ * @author lanbo
+ *
+ */
+@Controller
+@Api(tags="订单",  description = "订单", consumes="application/json")
+public class OrderController extends BaseController {
+
+	@Autowired
+	private OrderService orderService;
+
+	/**
+	 * 所有订单
+	 */
+	@RequestMapping(value = "/orders/status/{status}", method = RequestMethod.GET)
+	@ResponseBody()
+	@ApiOperation(value = "普通订单列表", notes = "普通订单列表")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public List<OrderList> getOrders(@PathVariable int status) {
+
+		List<OrderList> orderList = orderService.findStoreOrderList(
+				getStoreId(), getMemberId(), status);
+
+		return orderList;
+	}
+	
+	/**
+	 * 所有分销订单
+	 */
+	@RequestMapping(value = "/orders/retail/status/{status}", method = RequestMethod.GET)
+	@ResponseBody()
+	@ApiOperation(value = "分销订单列表", notes = "分销订单列表")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public List<OrderList> getRetailOrders(@PathVariable int status) {
+
+		List<OrderList> orderList = orderService.findStoreOrderRetailList(
+				getStoreId(), getMemberId(), status);
+
+		return orderList;
+	}
+
+	/**
+	 * 订单详情
+	 * 
+	 */
+	@RequestMapping(value = "/orders/{id}", method = RequestMethod.GET)
+	@ResponseBody()
+	@ApiOperation(value = "订单详情", notes = "订单详情")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public OrderList getOrderDetail(@PathVariable int id) {
+
+		return orderService.findStoreOrder(id, getStoreId(), getMemberId());
+	}
+
+	/**
+	 * 取消订单
+	 * 
+	 * @throws BusinessErrorException
+	 */
+	@RequestMapping(value = "/orders/{id}", method = RequestMethod.PUT)
+	@ResponseBody()
+	@ApiOperation(value = "取消订单", notes = "取消订单")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public void cancelOrder(@PathVariable int id,
+			@Valid @RequestBody(required = false) OrderCancel cancel)
+			throws BusinessErrorException {
+
+		orderService.cancelOrder(id, getStoreId(), getMemberId(), cancel);
+
+	}
+	
+	/**
+	 * 取消订单
+	 * 
+	 * @throws BusinessErrorException
+	 */
+	@RequestMapping(value = "/orders/retail/{id}", method = RequestMethod.PUT)
+	@ResponseBody()
+	@ApiOperation(value = "取消订单(分销)", notes = "取消订单")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public void cancelRetailOrder(@PathVariable int id,
+			@Valid @RequestBody(required = false) OrderCancel cancel)
+			throws BusinessErrorException {
+
+		orderService.cancelRetailOrder(id, getStoreId(), getMemberId(), cancel);
+
+	}
+
+	/**
+	 * 订单确认收货
+	 * 
+	 * @throws BusinessErrorException
+	 */
+	@RequestMapping(value = "/orders/{id}", method = RequestMethod.POST)
+	@ResponseBody()
+	@ApiOperation(value = "确认订单收货", notes = "确认订单收货")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public void confirmOrder(@PathVariable int id)
+			throws BusinessErrorException {
+
+		orderService.confirmOrder(id, getStoreId(), getMemberId());
+
+	}
+	
+	/**
+	 * 分销订单确认收货
+	 * 
+	 * @throws BusinessErrorException
+	 */
+	@RequestMapping(value = "/orders/retail/{id}", method = RequestMethod.POST)
+	@ResponseBody()
+	@ApiOperation(value = "确认订单收货（分销）", notes = "确认订单收货（分销）")
+	@ApiImplicitParams(value = {
+            @ApiImplicitParam(name = "token", value = "token", required = true, dataType = "string", paramType = "header")})
+	public void confirmRetailOrder(@PathVariable int id)
+			throws BusinessErrorException {
+
+		orderService.confirmRetailOrder(id, getStoreId(), getMemberId());
+
+	}
+
+
+}
